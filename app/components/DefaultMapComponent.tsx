@@ -148,31 +148,34 @@ const DefaultMapComponent: React.FC = () => {
 	const [showInstructions, setShowInstructions] = useState(true);
 	const mapRef = useRef<MapView>(null);
 
+	// Constants for zoom control
+	const MIN_DELTA = 0.15; // Less delta = more zoom
+	const MAX_DELTA = 50; // More delta = less zoom
+
 	// Create the fog polygon with a hole for the erased area
 	const createFogPolygon = () => {
-		// Create a polygon that covers the visible map area plus some padding
 		const visibleRegion = currentRegion;
+		// Use a smaller padding multiplier for better performance
 		const padding =
-			Math.max(visibleRegion.latitudeDelta, visibleRegion.longitudeDelta) * 2;
+			Math.max(visibleRegion.latitudeDelta, visibleRegion.longitudeDelta) * 0.5;
+
+		// Calculate bounds with minimal padding
+		const bounds = {
+			north: visibleRegion.latitude + visibleRegion.latitudeDelta / 2 + padding,
+			south: visibleRegion.latitude - visibleRegion.latitudeDelta / 2 - padding,
+			east:
+				visibleRegion.longitude + visibleRegion.longitudeDelta / 2 + padding,
+			west:
+				visibleRegion.longitude - visibleRegion.longitudeDelta / 2 - padding,
+		};
 
 		return {
 			coordinates: [
-				{
-					latitude: visibleRegion.latitude - padding,
-					longitude: visibleRegion.longitude - padding,
-				},
-				{
-					latitude: visibleRegion.latitude - padding,
-					longitude: visibleRegion.longitude + padding,
-				},
-				{
-					latitude: visibleRegion.latitude + padding,
-					longitude: visibleRegion.longitude + padding,
-				},
-				{
-					latitude: visibleRegion.latitude + padding,
-					longitude: visibleRegion.longitude - padding,
-				},
+				{ latitude: bounds.south, longitude: bounds.west },
+				{ latitude: bounds.south, longitude: bounds.east },
+				{ latitude: bounds.north, longitude: bounds.east },
+				{ latitude: bounds.north, longitude: bounds.west },
+				{ latitude: bounds.south, longitude: bounds.west }, // Close the polygon
 			],
 			holes: erasedArea.length >= 3 ? [erasedArea] : [],
 		};
@@ -215,8 +218,28 @@ const DefaultMapComponent: React.FC = () => {
 
 	// Handle region change
 	const handleRegionChangeComplete = (region: Region) => {
-		setCurrentRegion(region);
-		updateExploredPercentage(region);
+		// Enforce zoom limits
+		const newRegion = {
+			...region,
+			latitudeDelta: Math.min(
+				Math.max(region.latitudeDelta, MIN_DELTA),
+				MAX_DELTA
+			),
+			longitudeDelta: Math.min(
+				Math.max(region.longitudeDelta, MIN_DELTA),
+				MAX_DELTA
+			),
+		};
+
+		if (
+			newRegion.latitudeDelta !== region.latitudeDelta ||
+			newRegion.longitudeDelta !== region.longitudeDelta
+		) {
+			mapRef.current?.animateToRegion(newRegion, 200);
+		}
+
+		setCurrentRegion(newRegion);
+		updateExploredPercentage(newRegion);
 	};
 
 	return (
@@ -230,17 +253,25 @@ const DefaultMapComponent: React.FC = () => {
 				rotateEnabled={true}
 				scrollEnabled={true}
 				zoomEnabled={true}
-				minZoomLevel={3}
-				maxZoomLevel={18}
 				pitchEnabled={false}
+				moveOnMarkerPress={false}
+				showsUserLocation={false}
+				showsMyLocationButton={false}
+				showsCompass={false}
+				toolbarEnabled={false}
+				loadingEnabled={true}
+				zoomTapEnabled={false}
+				zoomControlEnabled={false}
 			>
-				{/* Fog overlay - uses native map overlay component */}
 				<Polygon
 					{...createFogPolygon()}
 					fillColor="rgba(0, 100, 255, 0.3)"
 					strokeColor="rgba(0, 100, 255, 0.5)"
 					strokeWidth={1}
 					tappable={false}
+					geodesic={true}
+					onPress={() => {}}
+					zIndex={1}
 				/>
 			</MapView>
 
@@ -282,6 +313,7 @@ const styles = StyleSheet.create({
 		flex: 1,
 		width: "100%",
 		height: "100%",
+		zIndex: 0,
 	},
 	overlayContainer: {
 		position: "absolute",
@@ -289,6 +321,8 @@ const styles = StyleSheet.create({
 		left: 0,
 		right: 0,
 		bottom: 0,
+		zIndex: 2,
+		pointerEvents: "box-none",
 	},
 	instructionsContainer: {
 		backgroundColor: "rgba(0, 0, 0, 0.7)",
