@@ -145,7 +145,6 @@ const DefaultMapComponent: React.FC = () => {
 		longitudeDelta: 0.0421,
 	});
 	const [percentExplored, setPercentExplored] = useState(0);
-	const [showInstructions, setShowInstructions] = useState(true);
 	const mapRef = useRef<MapView>(null);
 
 	// Constants for zoom control
@@ -265,8 +264,8 @@ const DefaultMapComponent: React.FC = () => {
 			>
 				<Polygon
 					{...createFogPolygon()}
-					fillColor="rgba(0, 100, 255, 0.3)"
-					strokeColor="rgba(0, 100, 255, 0.5)"
+					fillColor="rgba(76, 175, 80, 0.3)"
+					strokeColor="rgba(76, 175, 80, 0.5)"
 					strokeWidth={1}
 					tappable={false}
 					geodesic={true}
@@ -276,18 +275,6 @@ const DefaultMapComponent: React.FC = () => {
 			</MapView>
 
 			<SafeAreaView style={styles.overlayContainer}>
-				{showInstructions && (
-					<TouchableOpacity
-						style={styles.instructionsContainer}
-						onPress={() => setShowInstructions(false)}
-						activeOpacity={0.8}
-					>
-						<Text style={styles.instructionsText}>
-							• Two fingers: Move & zoom map
-						</Text>
-					</TouchableOpacity>
-				)}
-
 				<View style={styles.percentContainer}>
 					<Text style={styles.percentText}>
 						{`${percentExplored.toFixed(4)}%`}
@@ -323,19 +310,6 @@ const styles = StyleSheet.create({
 		bottom: 0,
 		zIndex: 2,
 		pointerEvents: "box-none",
-	},
-	instructionsContainer: {
-		backgroundColor: "rgba(0, 0, 0, 0.7)",
-		paddingVertical: 8,
-		paddingHorizontal: 16,
-		borderRadius: 20,
-		alignSelf: "center",
-		marginTop: Platform.OS === "ios" ? 10 : 40,
-	},
-	instructionsText: {
-		color: "white",
-		fontSize: 16,
-		textAlign: "center",
 	},
 	percentContainer: {
 		position: "absolute",
