@@ -54,6 +54,7 @@ class MapViewModel: ObservableObject {
     }
     
     init() {
+        // Initialize services first
         setupLocationServices()
     }
     

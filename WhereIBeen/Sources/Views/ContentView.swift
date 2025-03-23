@@ -42,14 +42,12 @@ struct ContentView: View {
                         if isExploring {
                             // Stop Exploring Button
                             StopExploringButton {
-                                isExploring = false
-                                viewModel.stopExploration()
+                                stopExploring()
                             }
                         } else {
                             // Start Exploring Button
                             StartExploringButton {
-                                isExploring = true
-                                viewModel.startExploration()
+                                startExploring()
                             }
                         }
                         
@@ -60,6 +58,17 @@ struct ContentView: View {
                 .padding()
             }
         }
+    }
+    
+    // Move actions outside of the view body to avoid SwiftUI warnings
+    private func startExploring() {
+        isExploring = true
+        viewModel.startExploration()
+    }
+    
+    private func stopExploring() {
+        isExploring = false
+        viewModel.stopExploration()
     }
 }
 
