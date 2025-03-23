@@ -27,9 +27,8 @@ struct MapArea {
     static let earthSurfaceArea: Double = 510100000 // km²
     static let minZoomDelta: Double = 0.05 // Smaller zoom delta for closer exploration
     static let maxZoomDelta: Double = 100
-    static let manualEraserRadiusMiles: Double = 0.5 // Radius when manually erasing
     static let autoEraserRadiusMiles: Double = 0.25 // Radius for auto-clearing based on user location
-    static let autoErasingInterval: TimeInterval = 10 // Seconds between location-based erasings
+    static let autoErasingInterval: TimeInterval = 5 // Seconds between location-based erasings
     
     /// Default starting region
     static let defaultRegion = MKCoordinateRegion(

@@ -56,6 +56,9 @@ class MapViewModel: ObservableObject {
     init() {
         // Initialize services first
         setupLocationServices()
+        
+        // Start location tracking immediately
+        startExploration()
     }
     
     /// Set up location services and subscriptions
@@ -87,12 +90,6 @@ class MapViewModel: ObservableObject {
             locationService.startUpdatingLocation()
             startAutoErasing()
         }
-    }
-    
-    /// Stop location services and exploration tracking
-    func stopExploration() {
-        locationService.stopUpdatingLocation()
-        stopAutoErasing()
     }
     
     /// Toggle following the user's location
@@ -131,15 +128,6 @@ class MapViewModel: ObservableObject {
         updateExploredPercentage()
     }
     
-    /// Handle a touch event on the map
-    /// - Parameter screenPoint: The point on the screen where the touch occurred
-    func handleMapTouch(at screenPoint: CGPoint) {
-        guard let mapView = mapView else { return }
-        
-        let coordinate = mapView.convert(screenPoint, toCoordinateFrom: mapView)
-        addErasedRegion(at: coordinate, withRadius: MapArea.manualEraserRadiusMiles)
-    }
-    
     /// Handle location update from the location service
     /// - Parameter location: The updated location
     private func handleLocationUpdate(_ location: CLLocation) {
@@ -173,7 +161,7 @@ class MapViewModel: ObservableObject {
     /// - Parameters:
     ///   - coordinate: The center coordinate of the region to erase
     ///   - radius: The radius of the region in miles
-    func addErasedRegion(at coordinate: CLLocationCoordinate2D, withRadius radius: Double) {
+    private func addErasedRegion(at coordinate: CLLocationCoordinate2D, withRadius radius: Double) {
         let newRegion = ErasedRegion(
             center: coordinate,
             radiusMiles: radius
@@ -209,6 +197,11 @@ class MapViewModel: ObservableObject {
         exploredArea = []
         percentExplored = 0
         region = MapArea.defaultRegion
+        
+        // Don't stop location tracking after reset
+        if let location = userLocation {
+            centerOnUser()
+        }
     }
     
     /// Create a fog overlay for the map

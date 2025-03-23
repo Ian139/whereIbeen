@@ -13,6 +13,7 @@
 		AA937EA22D900BBF0000D5E7 /* MapViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA937E992D900BBF0000D5E7 /* MapViewModel.swift */; };
 		AA937EA32D900BBF0000D5E7 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA937E9B2D900BBF0000D5E7 /* ContentView.swift */; };
 		AA937EA42D900BBF0000D5E7 /* MapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA937E9C2D900BBF0000D5E7 /* MapView.swift */; };
+		AA937EA62D900D5C0000D5E7 /* LocationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA937EA52D900D5C0000D5E7 /* LocationService.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -23,6 +24,7 @@
 		AA937E9B2D900BBF0000D5E7 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		AA937E9C2D900BBF0000D5E7 /* MapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapView.swift; sourceTree = "<group>"; };
 		AA937E9E2D900BBF0000D5E7 /* WhereIBeen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WhereIBeen.swift; path = WhereIBeen/Sources/WhereIBeen.swift; sourceTree = "<group>"; };
+		AA937EA52D900D5C0000D5E7 /* LocationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationService.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -68,6 +70,7 @@
 		AA937E982D900BBF0000D5E7 /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				AA937EA52D900D5C0000D5E7 /* LocationService.swift */,
 				AA937E972D900BBF0000D5E7 /* MapOverlayService.swift */,
 			);
 			name = Services;
@@ -150,6 +153,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AA937EA62D900D5C0000D5E7 /* LocationService.swift in Sources */,
 				AA937E9F2D900BBF0000D5E7 /* MapArea.swift in Sources */,
 				AA937EA02D900BBF0000D5E7 /* WhereIBeen.swift in Sources */,
 				AA937EA12D900BBF0000D5E7 /* MapOverlayService.swift in Sources */,
