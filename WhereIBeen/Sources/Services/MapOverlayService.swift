@@ -48,8 +48,8 @@ class MapOverlayService {
 
 /// Custom Fog Overlay that shows unexplored areas
 class FogOverlay: MKPolygon {
-    // Maximum number of erased regions to include at once
-    private static let maxRegionsToProcess = 100
+    // Maximum number of erased regions to include at once - reduced from 100 to 50
+    private static let maxRegionsToProcess = 50
     
     convenience init(region: MKCoordinateRegion, erasedRegions: [ErasedRegion]) {
         // Create the outer bounds of the fog - don't make it too large
@@ -135,25 +135,25 @@ class FogOverlay: MKPolygon {
     
     /// Determine appropriate number of points based on zoom level
     private static func determinePointCount(for zoomDelta: Double, radiusMiles: Double) -> Int {
-        // For very zoomed out views, use fewer points
+        // For very zoomed out views, use minimal points
         if zoomDelta > 50 {
-            return 8
+            return 6  // Reduced from 8
         }
         // For mid-level zoom
         else if zoomDelta > 10 {
-            return 16
+            return 8  // Reduced from 16
         }
         // For zoomed in views
         else if zoomDelta > 1 {
-            return 24
+            return 12  // Reduced from 24
         }
         // For very zoomed in views
         else if zoomDelta > 0.1 {
-            return 32
+            return 16  // Reduced from 32
         }
         // For extremely zoomed in, still cap at a reasonable number
         else {
-            return 36
+            return 24  // Reduced from 36
         }
     }
     

@@ -170,11 +170,15 @@ class MapViewModel: ObservableObject {
         var limitedRegion = newRegion
         
         // Set even stricter limits for very extreme zoom levels
-        let minZoomDelta = MapArea.minZoomDelta // Keep the minimum (most zoomed in) limit as is
+        // let minZoomDelta = MapArea.minZoomDelta // Keep the minimum (most zoomed in) limit as is
         let maxZoomDelta = 75.0 // Lower the maximum (most zoomed out) limit
         
-        limitedRegion.span.latitudeDelta = min(max(newRegion.span.latitudeDelta, minZoomDelta), maxZoomDelta)
-        limitedRegion.span.longitudeDelta = min(max(newRegion.span.longitudeDelta, minZoomDelta), maxZoomDelta)
+        // limitedRegion.span.latitudeDelta = min(max(newRegion.span.latitudeDelta, minZoomDelta), maxZoomDelta)
+        // limitedRegion.span.longitudeDelta = min(max(newRegion.span.longitudeDelta, minZoomDelta), maxZoomDelta)
+        
+        // Only enforce maximum zoom out limit
+        limitedRegion.span.latitudeDelta = min(newRegion.span.latitudeDelta, maxZoomDelta)
+        limitedRegion.span.longitudeDelta = min(newRegion.span.longitudeDelta, maxZoomDelta)
         
         // Compare span values individually instead of using != operator
         if limitedRegion.span.latitudeDelta != newRegion.span.latitudeDelta || 
@@ -270,9 +274,13 @@ class MapViewModel: ObservableObject {
     /// Create a fog overlay for the map
     /// - Returns: A polygon representing the fog overlay
     func createFogOverlay() -> MKPolygon {
-        // If the zoom level is extreme, return a simplified overlay
-        if region.span.latitudeDelta > 70 || region.span.latitudeDelta < 0.01 {
+        // If very zoomed out, return a simplified overlay
+        if region.span.latitudeDelta > 70 {
             return createSimplifiedFogOverlay()
+        }
+        // If very zoomed in, use square grid
+        else if region.span.latitudeDelta < 0.1 {
+            return createSquareGridOverlay()
         }
         
         return mapOverlayService.createFogOverlay(region: region, erasedRegions: erasedRegions)
@@ -304,6 +312,91 @@ class MapViewModel: ObservableObject {
         ]
         
         return MKPolygon(coordinates: bounds, count: bounds.count)
+    }
+    
+    /// Create a grid-based overlay for very zoomed in views
+    /// - Returns: A polygon with square holes for explored areas
+    private func createSquareGridOverlay() -> MKPolygon {
+        // Create the outer bounds with some padding
+        let padding = min(region.span.latitudeDelta, 1.0) * 0.5
+        
+        let bounds = [
+            CLLocationCoordinate2D(
+                latitude: region.center.latitude - region.span.latitudeDelta/2 - padding,
+                longitude: region.center.longitude - region.span.longitudeDelta/2 - padding
+            ),
+            CLLocationCoordinate2D(
+                latitude: region.center.latitude - region.span.latitudeDelta/2 - padding,
+                longitude: region.center.longitude + region.span.longitudeDelta/2 + padding
+            ),
+            CLLocationCoordinate2D(
+                latitude: region.center.latitude + region.span.latitudeDelta/2 + padding,
+                longitude: region.center.longitude + region.span.longitudeDelta/2 + padding
+            ),
+            CLLocationCoordinate2D(
+                latitude: region.center.latitude + region.span.latitudeDelta/2 + padding,
+                longitude: region.center.longitude - region.span.longitudeDelta/2 - padding
+            )
+        ]
+        
+        // Convert erased regions to squares
+        var squarePolygons: [MKPolygon] = []
+        let gridSize = 0.25 * 1609.34 // 0.25 miles in meters
+        
+        for region in erasedRegions {
+            // Only process regions that are visible in the current viewport
+            if isCoordinateInBounds(region.center, bounds: bounds) {
+                // Create a square for this region
+                let squareCoords = createSquareCoordinates(center: region.center, sideLength: gridSize)
+                squarePolygons.append(MKPolygon(coordinates: squareCoords, count: squareCoords.count))
+            }
+        }
+        
+        if !squarePolygons.isEmpty {
+            return MKPolygon(coordinates: bounds, count: bounds.count, interiorPolygons: squarePolygons)
+        } else {
+            return MKPolygon(coordinates: bounds, count: bounds.count)
+        }
+    }
+    
+    /// Create coordinates for a square centered at a point
+    private func createSquareCoordinates(center: CLLocationCoordinate2D, sideLength: Double) -> [CLLocationCoordinate2D] {
+        // Convert meters to approximate degrees at this latitude
+        let metersPerDegree = 111319.9 // approximate meters per degree at equator
+        let latDelta = sideLength / metersPerDegree
+        let lonDelta = sideLength / (metersPerDegree * cos(center.latitude * .pi / 180.0))
+        
+        return [
+            CLLocationCoordinate2D(
+                latitude: center.latitude - latDelta/2,
+                longitude: center.longitude - lonDelta/2
+            ),
+            CLLocationCoordinate2D(
+                latitude: center.latitude - latDelta/2,
+                longitude: center.longitude + lonDelta/2
+            ),
+            CLLocationCoordinate2D(
+                latitude: center.latitude + latDelta/2,
+                longitude: center.longitude + lonDelta/2
+            ),
+            CLLocationCoordinate2D(
+                latitude: center.latitude + latDelta/2,
+                longitude: center.longitude - lonDelta/2
+            )
+        ]
+    }
+    
+    /// Check if a coordinate is within the given bounds
+    private func isCoordinateInBounds(_ coordinate: CLLocationCoordinate2D, bounds: [CLLocationCoordinate2D]) -> Bool {
+        let minLat = min(bounds[0].latitude, bounds[1].latitude, bounds[2].latitude, bounds[3].latitude)
+        let maxLat = max(bounds[0].latitude, bounds[1].latitude, bounds[2].latitude, bounds[3].latitude)
+        let minLon = min(bounds[0].longitude, bounds[1].longitude, bounds[2].longitude, bounds[3].longitude)
+        let maxLon = max(bounds[0].longitude, bounds[1].longitude, bounds[2].longitude, bounds[3].longitude)
+        
+        return coordinate.latitude >= minLat &&
+               coordinate.latitude <= maxLat &&
+               coordinate.longitude >= minLon &&
+               coordinate.longitude <= maxLon
     }
     
     /// Update the percentage of the world that has been explored
