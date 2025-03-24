@@ -3,6 +3,8 @@ import MapKit
 
 struct ContentView: View {
     @StateObject private var viewModel = MapViewModel()
+    @State private var showLocationErrorAlert = false
+    @State private var errorMessage = ""
     
     var body: some View {
         ZStack {
@@ -30,6 +32,17 @@ struct ContentView: View {
             // Menu Overlay
             MenuView()
                 .frame(maxHeight: .infinity, alignment: .top)
+        }
+        .alert(isPresented: $showLocationErrorAlert) {
+            Alert(
+                title: Text("Location Error"),
+                message: Text(errorMessage),
+                dismissButton: .default(Text("OK"))
+            )
+        }
+        .onReceive(viewModel.locationErrorPublisher) { error in
+            errorMessage = error.localizedDescription
+            showLocationErrorAlert = true
         }
     }
 }
@@ -116,6 +129,7 @@ struct CompassButton: View {
                 .clipShape(Circle())
                 .shadow(radius: 2)
         }
+        .accessibilityLabel("Center on your location")
     }
 }
 
@@ -133,6 +147,7 @@ struct FollowUserButton: View {
                 .background(Color.blue.opacity(0.8))
                 .clipShape(Circle())
         }
+        .accessibilityLabel(isFollowing ? "Stop following your location" : "Follow your location")
     }
 }
 

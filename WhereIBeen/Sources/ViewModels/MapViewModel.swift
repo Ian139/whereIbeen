@@ -7,9 +7,15 @@ class MapViewModel: ObservableObject {
     // Published properties that the View can observe
     @Published var mapArea = MapArea()
     
+    // Error publishers
+    private let locationErrorSubject = PassthroughSubject<LocationServiceError, Never>()
+    var locationErrorPublisher: AnyPublisher<LocationServiceError, Never> {
+        locationErrorSubject.eraseToAnyPublisher()
+    }
+    
     // Services
-    private let mapOverlayService = MapOverlayService()
-    private let locationService = LocationService()
+    private let mapOverlayService: MapOverlayService
+    private let locationService: LocationService
     
     // Map view reference for coordinate conversion
     private weak var mapView: MKMapView?
@@ -17,6 +23,7 @@ class MapViewModel: ObservableObject {
     // Timer for auto-erasing based on location
     private var autoErasingTimer: Timer?
     private var locationUpdateSubscription: AnyCancellable?
+    private var errorSubscription: AnyCancellable?
     
     // Computed properties
     var region: MKCoordinateRegion {
@@ -53,12 +60,25 @@ class MapViewModel: ObservableObject {
         locationService.isLocationAvailable()
     }
     
-    init() {
-        // Initialize services first
+    // Initialize with dependency injection
+    init(mapOverlayService: MapOverlayService = MapOverlayService(), 
+         locationService: LocationService = LocationService()) {
+        self.mapOverlayService = mapOverlayService
+        self.locationService = locationService
+        
+        // Initialize services
         setupLocationServices()
+        setupErrorHandling()
         
         // Start location tracking immediately
         startExploration()
+    }
+    
+    deinit {
+        stopAutoErasing()
+        locationService.stopUpdatingLocation()
+        locationUpdateSubscription?.cancel()
+        errorSubscription?.cancel()
     }
     
     /// Set up location services and subscriptions
@@ -73,6 +93,19 @@ class MapViewModel: ObservableObject {
         // Set up location update callback
         locationService.onLocationUpdate = { [weak self] location in
             self?.handleLocationUpdate(location)
+        }
+    }
+    
+    /// Set up error handling
+    private func setupErrorHandling() {
+        errorSubscription = locationService.$error
+            .compactMap { $0 }
+            .sink { [weak self] error in
+                self?.locationErrorSubject.send(error)
+            }
+        
+        locationService.onError = { [weak self] error in
+            self?.locationErrorSubject.send(error)
         }
     }
     

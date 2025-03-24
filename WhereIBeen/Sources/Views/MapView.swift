@@ -27,6 +27,9 @@ struct MapView: UIViewRepresentable {
         panGestureRecognizer.delegate = context.coordinator
         mapView.addGestureRecognizer(panGestureRecognizer)
         
+        // Add accessibility
+        configureAccessibility(mapView)
+        
         return mapView
     }
     
@@ -39,6 +42,33 @@ struct MapView: UIViewRepresentable {
         mapView.overlays.forEach { mapView.removeOverlay($0) }
         let fogOverlay = fogOverlayProvider()
         mapView.addOverlay(fogOverlay)
+        
+        // Update accessibility value to reflect current exploration percentage
+        updateAccessibilityValue(mapView)
+    }
+    
+    /// Configure accessibility for the map view
+    private func configureAccessibility(_ mapView: MKMapView) {
+        mapView.isAccessibilityElement = true
+        mapView.accessibilityLabel = "Exploration map"
+        mapView.accessibilityHint = "Shows your explored areas with a blue fog overlay for unexplored regions. Double tap and hold to explore an area."
+    }
+    
+    /// Update the accessibility value with current exploration info
+    private func updateAccessibilityValue(_ mapView: MKMapView) {
+        // Calculate approximate explored percentage for accessibility
+        let exploredPercentage = calculateExploredPercentage()
+        mapView.accessibilityValue = String(format: "%.2f percent of the world explored", exploredPercentage)
+    }
+    
+    /// Calculate an approximate percentage for accessibility information
+    private func calculateExploredPercentage() -> Double {
+        // Use the number of explored coordinates as a simple approximation
+        // A more accurate calculation would come from the viewModel, but this is just for accessibility
+        let maxCoordinates = MapArea.maxCoordinatesStored
+        let currentCoordinates = exploredArea.count
+        
+        return min(Double(currentCoordinates) / Double(maxCoordinates) * 100, 100)
     }
     
     /// Create a coordinator to handle delegate methods

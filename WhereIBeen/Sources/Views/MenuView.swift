@@ -28,6 +28,7 @@ struct MenuView: View {
                     .fill(Color.gray.opacity(0.5))
                     .frame(width: 40, height: 5)
                     .padding(.bottom, 8)
+                    .accessibilityHidden(true)
             }
             .frame(maxWidth: .infinity)
             .frame(height: menuHeight + geometry.safeAreaInsets.top)
@@ -53,6 +54,10 @@ struct MenuView: View {
                     }
             )
             .animation(.spring(), value: isMenuVisible)
+            .accessibilityElement(children: .contain)
+            .accessibilityLabel("Menu")
+            .accessibilityHint("Swipe down to open menu. Swipe up to close.")
+            .accessibilityAddTraits(isMenuVisible ? .isSelected : [])
         }
     }
 }
@@ -68,17 +73,20 @@ struct MenuButton: View {
             HStack(spacing: 12) {
                 Image(systemName: icon)
                     .font(.title3)
+                    .accessibility(hidden: true)
                 Text(title)
                     .font(.body)
                 Spacer()
                 Image(systemName: "chevron.right")
                     .font(.subheadline)
                     .foregroundColor(.gray)
+                    .accessibility(hidden: true)
             }
             .foregroundColor(.primary)
             .padding(.horizontal, 12)
             .padding(.vertical, 4)
         }
+        .accessibilityHint("Opens \(title.lowercased()) screen")
     }
 }
 
