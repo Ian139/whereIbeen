@@ -1,0 +1,13 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Documentation Standards
+
+## Required Documentation
+- Function and class purpose
+- Parameter descriptions
+- Return value explanations
+- Usage examples where needed
+- Known limitations 

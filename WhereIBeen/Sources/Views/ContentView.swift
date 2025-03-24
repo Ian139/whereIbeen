@@ -12,21 +12,6 @@ struct ContentView: View {
             
             // UI Overlay
             VStack {
-                // Top controls
-                HStack {
-                    Spacer()
-                    
-                    // Toggle for following user
-                    if viewModel.userLocation != nil {
-                        FollowUserButton(
-                            isFollowing: viewModel.isFollowingUser,
-                            action: viewModel.toggleFollowUser
-                        )
-                    }
-                }
-                .padding(.horizontal)
-                .padding(.top, 8)
-                
                 Spacer()
                 
                 // Bottom controls
@@ -41,27 +26,11 @@ struct ContentView: View {
                 }
                 .padding()
             }
+            
+            // Menu Overlay
+            MenuView()
+                .frame(maxHeight: .infinity, alignment: .top)
         }
-        .overlay(
-            // Reset button in the top-left corner as a small option
-            VStack {
-                HStack {
-                    Button(action: viewModel.resetMap) {
-                        Image(systemName: "arrow.counterclockwise")
-                            .foregroundColor(.white)
-                            .font(.system(size: 16))
-                            .padding(8)
-                            .background(Color.black.opacity(0.6))
-                            .clipShape(Circle())
-                    }
-                    .padding()
-                    
-                    Spacer()
-                }
-                
-                Spacer()
-            }
-        )
     }
 }
 

@@ -1,0 +1,24 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Core Development Principles
+
+## 1. Code Simplicity and Clarity
+- Write simple, readable code that's easy to understand and maintain
+- Avoid premature optimization or over-engineering
+- Follow the KISS principle (Keep It Simple, Stupid)
+- Use clear, descriptive naming for variables, functions, and classes
+
+## 2. Safety First Approach
+- Never generate code without understanding the full context
+- Ask for clarification when requirements are unclear
+- Verify dependencies and versions before suggesting them
+- Handle errors and edge cases appropriately
+
+## 3. Progressive Enhancement
+- Start with basic, working implementations before adding complexity
+- Build features incrementally, ensuring each step works
+- Test core functionality before adding advanced features
+- Document assumptions and limitations clearly 

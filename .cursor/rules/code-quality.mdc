@@ -1,0 +1,24 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Code Quality Guidelines
+
+## Architecture
+- Follow MVVM architecture patterns consistently
+- Keep views focused on UI logic only
+- Maintain clear separation of concerns
+- Use services for reusable business logic
+
+## SwiftUI Best Practices
+- Prefer SwiftUI views over UIKit when possible
+- Keep view components small and focused
+- Use @State and @Binding appropriately
+- Follow SwiftUI lifecycle management guidelines
+
+## Data Management
+- Use appropriate data persistence methods (Core Data/CloudKit)
+- Implement proper error handling for data operations
+- Follow CRUD operation best practices
+- Maintain data privacy and security 

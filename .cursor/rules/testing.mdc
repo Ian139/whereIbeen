@@ -1,0 +1,13 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Testing Guidelines
+
+## Testing Requirements
+- Write testable code
+- Include unit tests for business logic
+- Test edge cases and error conditions
+- Verify UI interactions
+- Test network operations 

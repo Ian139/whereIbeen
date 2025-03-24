@@ -1,0 +1,20 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Before Writing Code
+
+## Pre-Implementation Checklist
+1. Understand the complete requirement
+2. Verify all necessary dependencies are available
+3. Check for existing similar implementations
+4. Consider potential edge cases
+5. Plan error handling strategy
+
+## When to Ask Questions
+- When requirements are ambiguous
+- Before implementing complex features
+- When dealing with security-sensitive operations
+- If multiple implementation approaches exist
+- When external dependencies are needed 

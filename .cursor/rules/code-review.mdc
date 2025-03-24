@@ -1,0 +1,20 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Code Review Standards
+
+## What to Look For
+- Code simplicity and readability
+- Proper error handling
+- Memory management
+- UI/UX considerations
+- Security implications
+
+## Common Red Flags
+- Overly complex solutions
+- Unclear naming conventions
+- Missing error handling
+- Hard-coded values
+- Security vulnerabilities 

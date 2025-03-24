@@ -1,0 +1,24 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Prohibited Practices
+
+## DO NOT
+- Generate code without understanding context
+- Implement overly complex solutions
+- Skip error handling
+- Use deprecated APIs
+- Ignore security best practices
+- Make assumptions about requirements
+
+## When to Seek Clarification
+Always ask for clarification when:
+1. Requirements are unclear
+2. Multiple implementation options exist
+3. Security concerns arise
+4. Performance implications are unclear
+5. Integration points are ambiguous
+
+Remember: It's better to ask questions first than to implement incorrect or unsafe solutions. 

@@ -1,0 +1,33 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# No Over-Engineering
+
+## Core Principles
+- Solve the immediate problem at hand
+- Don't add complexity for future "what-ifs"
+- Keep implementations straightforward
+- Choose simple solutions over clever ones
+
+## Warning Signs of Over-Engineering
+- Adding abstractions without clear need
+- Creating complex inheritance hierarchies
+- Implementing features "just in case"
+- Over-generalizing specific solutions
+
+## Best Practices
+- Start with the simplest working solution
+- Add complexity only when proven necessary
+- Prefer composition over inheritance
+- Keep functions small and focused
+- Use standard library solutions when available
+
+## When Refactoring
+- Only refactor when there's a clear benefit
+- Keep changes minimal and focused
+- Maintain existing interfaces when possible
+- Document why complexity is needed
+
+Remember: The best code is often the simplest code that solves the problem effectively.
