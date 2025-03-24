@@ -26,8 +26,8 @@ struct MenuView: View {
                 // Handle at bottom
                 RoundedRectangle(cornerRadius: 2.5)
                     .fill(Color.gray.opacity(0.5))
-                    .frame(width: 40, height: 5)
-                    .padding(.bottom, 8)
+                    .frame(width: 40, height: 6)
+                    .padding(.bottom, 16)
                     .accessibilityHidden(true)
             }
             .frame(maxWidth: .infinity)
@@ -89,36 +89,36 @@ struct MenuButton: View {
         .accessibilityHint("Opens \(title.lowercased()) screen")
     }
 }
-
-// Extension to create custom corner radius
-extension View {
-    func cornerRadius(_ radius: CGFloat, corners: UIRectCorner) -> some View {
-        clipShape(RoundedCorner(radius: radius, corners: corners))
-    }
-    
-    func only(topLeft: Bool = false, topRight: Bool = false, bottomLeft: Bool = false, bottomRight: Bool = false) -> some View {
-        var corners: UIRectCorner = []
-        if topLeft { corners.insert(.topLeft) }
-        if topRight { corners.insert(.topRight) }
-        if bottomLeft { corners.insert(.bottomLeft) }
-        if bottomRight { corners.insert(.bottomRight) }
-        return cornerRadius(20, corners: corners)
-    }
-}
-
-struct RoundedCorner: Shape {
-    var radius: CGFloat = .infinity
-    var corners: UIRectCorner = .allCorners
-    
-    func path(in rect: CGRect) -> Path {
-        let path = UIBezierPath(
-            roundedRect: rect,
-            byRoundingCorners: corners,
-            cornerRadii: CGSize(width: radius, height: radius)
-        )
-        return Path(path.cgPath)
-    }
-}
+//
+//// Extension to create custom corner radius
+//extension View {
+//    func cornerRadius(_ radius: CGFloat, corners: UIRectCorner) -> some View {
+//        clipShape(RoundedCorner(radius: radius, corners: corners))
+//    }
+//    
+//    func only(topLeft: Bool = false, topRight: Bool = false, bottomLeft: Bool = false, bottomRight: Bool = false) -> some View {
+//        var corners: UIRectCorner = []
+//        if topLeft { corners.insert(.topLeft) }
+//        if topRight { corners.insert(.topRight) }
+//        if bottomLeft { corners.insert(.bottomLeft) }
+//        if bottomRight { corners.insert(.bottomRight) }
+//        return cornerRadius(20, corners: corners)
+//    }
+//}
+//
+//struct RoundedCorner: Shape {
+//    var radius: CGFloat = .infinity
+//    var corners: UIRectCorner = .allCorners
+//    
+//    func path(in rect: CGRect) -> Path {
+//        let path = UIBezierPath(
+//            roundedRect: rect,
+//            byRoundingCorners: corners,
+//            cornerRadii: CGSize(width: radius, height: radius)
+//        )
+//        return Path(path.cgPath)
+//    }
+//}
 
 #Preview {
     MenuView()

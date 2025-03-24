@@ -83,7 +83,7 @@ class MapViewModel: ObservableObject {
     
     deinit {
         stopAutoErasing()
-        locationService.stopUpdatingLocation()
+        locationService.stop()
         locationUpdateSubscription?.cancel()
         errorSubscription?.cancel()
         locationSubscription?.cancel()
@@ -139,10 +139,10 @@ class MapViewModel: ObservableObject {
     
     /// Start location services and exploration tracking
     func startExploration() {
-        locationService.requestLocationAuthorization()
+        // Use the new start method instead of requestLocationAuthorization
+        locationService.start()
         
         if locationService.isLocationAvailable() {
-            locationService.startUpdatingLocation()
             startAutoErasing()
         }
     }
