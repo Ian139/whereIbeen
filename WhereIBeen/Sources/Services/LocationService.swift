@@ -14,17 +14,21 @@ enum LocationServiceError: Error, LocalizedError {
     var errorDescription: String? {
         switch self {
         case .locationServicesDisabled:
-            return "Location services are disabled"
+            return "Location services are disabled on your device. Please enable them in Settings > Privacy > Location Services."
         case .authorizationDenied:
-            return "Location access has been denied"
+            return "You've denied location access for this app. Please go to Settings > Privacy > Location Services > WhereIBeen to enable it."
         case .authorizationRestricted:
-            return "Location access is restricted"
+            return "Location access is restricted, possibly due to parental controls. Please check your device settings."
         case .locationUnknown:
-            return "Unable to determine your location"
+            return "Unable to determine your location at this time. Please ensure you have a clear view of the sky or try again later."
         case .accuracyTooLow(let accuracy):
-            return "Location accuracy too low: \(accuracy)m"
+            if accuracy < 0 {
+                return "Your current location is invalid. Please ensure you have a clear view of the sky and try again."
+            } else {
+                return "Your current location has low accuracy (\(Int(accuracy))m). Try moving to an open area for better GPS signal."
+            }
         case .unknown(let error):
-            return "Unknown error: \(error.localizedDescription)"
+            return "Location error: \(error.localizedDescription). Please try again."
         }
     }
 }
@@ -38,6 +42,9 @@ class LocationService: NSObject, ObservableObject {
     
     // Location manager
     private let locationManager = CLLocationManager()
+    private var retryCount = 0
+    private let maxRetries = 3
+    private var retryTimer: Timer?
     
     // Callback for location updates
     var onLocationUpdate: ((CLLocation) -> Void)?
@@ -55,6 +62,13 @@ class LocationService: NSObject, ObservableObject {
         if #available(iOS 11.0, *) {
             locationManager.showsBackgroundLocationIndicator = true
         }
+        
+        // Initial authorization status check
+        authorizationStatus = locationManager.authorizationStatus
+    }
+    
+    deinit {
+        retryTimer?.invalidate()
     }
     
     /// Request authorization to use location services
@@ -64,6 +78,9 @@ class LocationService: NSObject, ObservableObject {
     
     /// Start updating the user's location
     func startUpdatingLocation() {
+        // Reset retry count when starting
+        retryCount = 0
+        
         if !CLLocationManager.locationServicesEnabled() {
             let error = LocationServiceError.locationServicesDisabled
             self.error = error
@@ -87,9 +104,30 @@ class LocationService: NSObject, ObservableObject {
         }
     }
     
+    /// Retry location updates after a delay
+    private func scheduleRetry() {
+        guard retryCount < maxRetries else {
+            // Max retries reached, send the error
+            let error = LocationServiceError.locationUnknown
+            self.error = error
+            onError?(error)
+            return
+        }
+        
+        retryCount += 1
+        retryTimer?.invalidate()
+        
+        // Retry after a short delay
+        retryTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: false) { [weak self] _ in
+            self?.locationManager.startUpdatingLocation()
+        }
+    }
+    
     /// Stop updating the user's location
     func stopUpdatingLocation() {
         locationManager.stopUpdatingLocation()
+        retryTimer?.invalidate()
+        retryTimer = nil
     }
     
     /// Check if location services are enabled and authorized
@@ -103,15 +141,27 @@ class LocationService: NSObject, ObservableObject {
 // MARK: - CLLocationManagerDelegate
 extension LocationService: CLLocationManagerDelegate {
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-        guard let location = locations.last else { return }
+        guard let location = locations.last else { 
+            scheduleRetry()
+            return 
+        }
         
-        // Filter out inaccurate locations
-        if location.horizontalAccuracy < 0 || location.horizontalAccuracy > 100 {
-            let error = LocationServiceError.accuracyTooLow(accuracy: location.horizontalAccuracy)
-            self.error = error
-            onError?(error)
+        // Be more lenient with accuracy - only reject extremely inaccurate locations
+        // Negative accuracy means the location is invalid
+        if location.horizontalAccuracy < 0 || location.horizontalAccuracy > 500 {
+            if retryCount < maxRetries {
+                scheduleRetry()
+            } else {
+                let error = LocationServiceError.accuracyTooLow(accuracy: location.horizontalAccuracy)
+                self.error = error
+                onError?(error)
+            }
             return
         }
+        
+        // Reset retry count on success
+        retryCount = 0
+        retryTimer?.invalidate()
         
         // Clear any previous errors
         if error != nil {
@@ -142,6 +192,14 @@ extension LocationService: CLLocationManagerDelegate {
     }
     
     func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
+        // For transient errors, retry a few times
+        if let clError = error as? CLError, clError.code == .locationUnknown {
+            if retryCount < maxRetries {
+                scheduleRetry()
+                return
+            }
+        }
+        
         let locationError: LocationServiceError
         
         if let clError = error as? CLError {

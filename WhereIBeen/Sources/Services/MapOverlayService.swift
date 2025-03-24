@@ -48,9 +48,12 @@ class MapOverlayService {
 
 /// Custom Fog Overlay that shows unexplored areas
 class FogOverlay: MKPolygon {
+    // Maximum number of erased regions to include at once
+    private static let maxRegionsToProcess = 100
+    
     convenience init(region: MKCoordinateRegion, erasedRegions: [ErasedRegion]) {
-        // Create the outer bounds of the fog
-        let padding = max(region.span.latitudeDelta, region.span.longitudeDelta) * 0.5
+        // Create the outer bounds of the fog - don't make it too large
+        let padding = min(max(region.span.latitudeDelta, region.span.longitudeDelta) * 0.5, 10.0)
         
         let bounds = [
             CLLocationCoordinate2D(
@@ -71,15 +74,33 @@ class FogOverlay: MKPolygon {
             )
         ]
         
+        // Filter regions that are visible in the current viewport (with padding)
+        let visibleRegions = erasedRegions.filter { regionItem in
+            FogOverlay.isCoordinateInVisibleArea(
+                coordinate: regionItem.center,
+                visibleArea: bounds,
+                buffer: regionItem.radiusMiles * 1609.34 // Convert miles to meters
+            )
+        }
+        
+        // Limit the number of regions to process
+        let regionsToProcess = Array(visibleRegions.prefix(FogOverlay.maxRegionsToProcess))
+        
+        // Adjust point count based on zoom level to prevent performance issues
+        let zoom = Double(region.span.latitudeDelta)
+        
         // Create interior polygons for each erased region (circle approximation)
         var interiorPolygons: [MKPolygon] = []
         
-        for erasedRegion in erasedRegions {
+        for erasedRegion in regionsToProcess {
+            // Determine appropriate number of points based on zoom level
+            let pointCount = FogOverlay.determinePointCount(for: zoom, radiusMiles: erasedRegion.radiusMiles)
+            
             // Create a circular polygon by approximating with points
             let circlePoints = FogOverlay.createCirclePoints(
                 center: erasedRegion.center,
                 radiusMiles: erasedRegion.radiusMiles,
-                numPoints: 36 // More points = smoother circle
+                numPoints: pointCount
             )
             
             if circlePoints.count >= 3 {
@@ -91,6 +112,48 @@ class FogOverlay: MKPolygon {
             self.init(coordinates: bounds, count: bounds.count, interiorPolygons: interiorPolygons)
         } else {
             self.init(coordinates: bounds, count: bounds.count)
+        }
+    }
+    
+    /// Determine if a coordinate is within or near the visible area
+    private static func isCoordinateInVisibleArea(coordinate: CLLocationCoordinate2D, visibleArea: [CLLocationCoordinate2D], buffer: Double) -> Bool {
+        guard visibleArea.count >= 4 else { return true } // Safety check
+        
+        let minLat = min(visibleArea[0].latitude, visibleArea[1].latitude, visibleArea[2].latitude, visibleArea[3].latitude)
+        let maxLat = max(visibleArea[0].latitude, visibleArea[1].latitude, visibleArea[2].latitude, visibleArea[3].latitude)
+        let minLng = min(visibleArea[0].longitude, visibleArea[1].longitude, visibleArea[2].longitude, visibleArea[3].longitude)
+        let maxLng = max(visibleArea[0].longitude, visibleArea[1].longitude, visibleArea[2].longitude, visibleArea[3].longitude)
+        
+        // Convert buffer from meters to approximate degrees (very rough approximation)
+        let bufferDegrees = buffer / 111000.0 // ~111km per degree at the equator
+        
+        return coordinate.latitude >= minLat - bufferDegrees &&
+               coordinate.latitude <= maxLat + bufferDegrees &&
+               coordinate.longitude >= minLng - bufferDegrees &&
+               coordinate.longitude <= maxLng + bufferDegrees
+    }
+    
+    /// Determine appropriate number of points based on zoom level
+    private static func determinePointCount(for zoomDelta: Double, radiusMiles: Double) -> Int {
+        // For very zoomed out views, use fewer points
+        if zoomDelta > 50 {
+            return 8
+        }
+        // For mid-level zoom
+        else if zoomDelta > 10 {
+            return 16
+        }
+        // For zoomed in views
+        else if zoomDelta > 1 {
+            return 24
+        }
+        // For very zoomed in views
+        else if zoomDelta > 0.1 {
+            return 32
+        }
+        // For extremely zoomed in, still cap at a reasonable number
+        else {
+            return 36
         }
     }
     

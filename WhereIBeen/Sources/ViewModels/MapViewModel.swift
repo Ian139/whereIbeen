@@ -13,6 +13,12 @@ class MapViewModel: ObservableObject {
         locationErrorSubject.eraseToAnyPublisher()
     }
     
+    // Location restored publisher
+    private let locationRestoredSubject = PassthroughSubject<Void, Never>()
+    var locationRestoredPublisher: AnyPublisher<Void, Never> {
+        locationRestoredSubject.eraseToAnyPublisher()
+    }
+    
     // Services
     private let mapOverlayService: MapOverlayService
     private let locationService: LocationService
@@ -24,6 +30,7 @@ class MapViewModel: ObservableObject {
     private var autoErasingTimer: Timer?
     private var locationUpdateSubscription: AnyCancellable?
     private var errorSubscription: AnyCancellable?
+    private var locationSubscription: AnyCancellable?
     
     // Computed properties
     var region: MKCoordinateRegion {
@@ -79,6 +86,7 @@ class MapViewModel: ObservableObject {
         locationService.stopUpdatingLocation()
         locationUpdateSubscription?.cancel()
         errorSubscription?.cancel()
+        locationSubscription?.cancel()
     }
     
     /// Set up location services and subscriptions
@@ -90,9 +98,18 @@ class MapViewModel: ObservableObject {
                 self?.handleLocationUpdate(location)
             }
         
+        // Listen for successful location updates
+        locationSubscription = locationService.$currentLocation
+            .compactMap { $0 }
+            .sink { [weak self] _ in
+                // When we get a valid location, notify that location services are restored
+                self?.locationRestoredSubject.send()
+            }
+        
         // Set up location update callback
         locationService.onLocationUpdate = { [weak self] location in
             self?.handleLocationUpdate(location)
+            self?.locationRestoredSubject.send()
         }
     }
     
@@ -107,6 +124,11 @@ class MapViewModel: ObservableObject {
         locationService.onError = { [weak self] error in
             self?.locationErrorSubject.send(error)
         }
+    }
+    
+    /// Retry location services after an error
+    func retryLocationServices() {
+        startExploration()
     }
     
     /// Set the reference to the MKMapView
@@ -144,21 +166,29 @@ class MapViewModel: ObservableObject {
     /// Handle changes to the map region
     /// - Parameter newRegion: The new region after user interaction
     func handleRegionChange(_ newRegion: MKCoordinateRegion) {
-        // Enforce zoom limits
+        // Enforce zoom limits - use more restrictive limits to prevent performance issues
         var limitedRegion = newRegion
-        limitedRegion.span.latitudeDelta = min(max(newRegion.span.latitudeDelta, MapArea.minZoomDelta), MapArea.maxZoomDelta)
-        limitedRegion.span.longitudeDelta = min(max(newRegion.span.longitudeDelta, MapArea.minZoomDelta), MapArea.maxZoomDelta)
+        
+        // Set even stricter limits for very extreme zoom levels
+        let minZoomDelta = MapArea.minZoomDelta // Keep the minimum (most zoomed in) limit as is
+        let maxZoomDelta = 75.0 // Lower the maximum (most zoomed out) limit
+        
+        limitedRegion.span.latitudeDelta = min(max(newRegion.span.latitudeDelta, minZoomDelta), maxZoomDelta)
+        limitedRegion.span.longitudeDelta = min(max(newRegion.span.longitudeDelta, minZoomDelta), maxZoomDelta)
         
         // Compare span values individually instead of using != operator
         if limitedRegion.span.latitudeDelta != newRegion.span.latitudeDelta || 
            limitedRegion.span.longitudeDelta != newRegion.span.longitudeDelta {
             region = limitedRegion
+            
+            // If we had to correct the zoom due to limits, add a small delay to prevent freezing
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+                self?.updateExploredPercentage()
+            }
         } else {
             region = newRegion
+            updateExploredPercentage()
         }
-        
-        // Update the explored percentage based on erased area
-        updateExploredPercentage()
     }
     
     /// Handle location update from the location service
@@ -240,7 +270,40 @@ class MapViewModel: ObservableObject {
     /// Create a fog overlay for the map
     /// - Returns: A polygon representing the fog overlay
     func createFogOverlay() -> MKPolygon {
+        // If the zoom level is extreme, return a simplified overlay
+        if region.span.latitudeDelta > 70 || region.span.latitudeDelta < 0.01 {
+            return createSimplifiedFogOverlay()
+        }
+        
         return mapOverlayService.createFogOverlay(region: region, erasedRegions: erasedRegions)
+    }
+    
+    /// Create a simplified fog overlay for extreme zoom levels
+    /// - Returns: A simplified polygon with minimal detail
+    private func createSimplifiedFogOverlay() -> MKPolygon {
+        // Create a simple rectangle for the fog with no holes
+        let padding = min(region.span.latitudeDelta, 10.0) * 0.5
+        
+        let bounds = [
+            CLLocationCoordinate2D(
+                latitude: region.center.latitude - region.span.latitudeDelta/2 - padding,
+                longitude: region.center.longitude - region.span.longitudeDelta/2 - padding
+            ),
+            CLLocationCoordinate2D(
+                latitude: region.center.latitude - region.span.latitudeDelta/2 - padding,
+                longitude: region.center.longitude + region.span.longitudeDelta/2 + padding
+            ),
+            CLLocationCoordinate2D(
+                latitude: region.center.latitude + region.span.latitudeDelta/2 + padding,
+                longitude: region.center.longitude + region.span.longitudeDelta/2 + padding
+            ),
+            CLLocationCoordinate2D(
+                latitude: region.center.latitude + region.span.latitudeDelta/2 + padding,
+                longitude: region.center.longitude - region.span.longitudeDelta/2 - padding
+            )
+        ]
+        
+        return MKPolygon(coordinates: bounds, count: bounds.count)
     }
     
     /// Update the percentage of the world that has been explored
