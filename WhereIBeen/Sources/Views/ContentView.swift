@@ -53,38 +53,55 @@ struct ContentView: View {
     @State private var showLocationErrorAlert = false
     @State private var errorMessage = ""
     @State private var showRetryButton = false
+    @State private var selectedTab = 0
     
     var body: some View {
         ZStack(alignment: .top) {
-            // Map
-            MapContainer(viewModel: viewModel)
-                .edgesIgnoringSafeArea(.all)
-            
-            // Menu Overlay at the top
-            MenuView()
-                .zIndex(1) // Ensure menu is above other content
-            
-            // UI Overlay
-            VStack {
-                Spacer()
+            // Show different view based on selected tab
+            if selectedTab == 0 {
+                // Map
+                MapContainer(viewModel: viewModel)
+                    .edgesIgnoringSafeArea(.all)
                 
-                // Bottom controls moved to right side and up
-                HStack {
-                    Spacer() // This pushes the controls to the right
+                // UI Overlay
+                VStack {
+                    Spacer()
                     
-                    VStack(spacing: 8) {
-                        // Level View
-                        LevelView(level: Int(viewModel.totalMiles / 100) + 1, 
-                                milesExplored: viewModel.totalMiles)
+                    // Bottom controls moved to right side and up
+                    HStack {
+                        Spacer() // This pushes the controls to the right
                         
-                        // Compass button to center on user's location
-                        CompassButton(action: viewModel.centerOnUser)
+                        VStack(spacing: 8) {
+                            // Compass button to center on user's location
+                            CompassButton(action: viewModel.centerOnUser)
+                            
+                            // Level View
+                            LevelView(level: Int(viewModel.totalMiles / 100) + 1, 
+                                    milesExplored: viewModel.totalMiles)
+                        }
+                        .padding()
+                        .padding(.bottom, 100) // Increased bottom padding to move controls up more
+                        .padding(.trailing, 16) // Add some padding from the right edge
                     }
-                    .padding()
-                    .padding(.bottom, 100) // Increased bottom padding to move controls up more
-                    .padding(.trailing, 16) // Add some padding from the right edge
                 }
+            } else if selectedTab == 1 {
+                // Profile - pass the shared viewModel
+                ProfileView(viewModel: viewModel)
+            } else if selectedTab == 2 {
+                // Friends (placeholder)
+                Text("Friends View Coming Soon")
+                    .font(.title)
+                    .foregroundColor(.secondary)
+            } else if selectedTab == 3 {
+                // Settings (placeholder)
+                Text("Settings View Coming Soon")
+                    .font(.title)
+                    .foregroundColor(.secondary)
             }
+            
+            // Menu Overlay at the bottom
+            MenuView(selectedTab: $selectedTab)
+                .zIndex(1) // Ensure menu is above other content
             
             // Error overlay for persistent errors
             if showRetryButton {

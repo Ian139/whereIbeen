@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct MenuView: View {
-    @State private var selectedTab = 0
+    @Binding var selectedTab: Int
     
     var body: some View {
         VStack {
@@ -103,5 +103,5 @@ struct RoundedCorner: Shape {
 }
 
 #Preview {
-    MenuView()
+    MenuView(selectedTab: .constant(0))
 } 
