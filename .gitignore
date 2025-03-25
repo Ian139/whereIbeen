@@ -104,3 +104,6 @@ DerivedData/
 *.perspectivev3
 !default.perspectivev3
 *.xcuserstate
+*.xcuserstate
+xcuserdata/
+project.xcworkspace/
