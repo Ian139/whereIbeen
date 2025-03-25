@@ -67,7 +67,7 @@ struct ContentView: View {
                 VStack {
                     Spacer()
                     
-                    // Bottom controls moved to right side and up
+                    // Bottom controls moved to right side and just above menu bar
                     HStack {
                         Spacer() // This pushes the controls to the right
                         
@@ -79,9 +79,8 @@ struct ContentView: View {
                             LevelView(level: Int(viewModel.totalMiles / 100) + 1, 
                                     milesExplored: viewModel.totalMiles)
                         }
-                        .padding()
-                        .padding(.bottom, 100) // Increased bottom padding to move controls up more
                         .padding(.trailing, 16) // Add some padding from the right edge
+                        .padding(.bottom, 50) // Reduced bottom padding to position just above menu bar
                     }
                 }
             } else if selectedTab == 1 {
@@ -93,10 +92,8 @@ struct ContentView: View {
                     .font(.title)
                     .foregroundColor(.secondary)
             } else if selectedTab == 3 {
-                // Settings (placeholder)
-                Text("Settings View Coming Soon")
-                    .font(.title)
-                    .foregroundColor(.secondary)
+                // Settings
+                SettingsView()
             }
             
             // Menu Overlay at the bottom
