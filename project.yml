@@ -1,0 +1,39 @@
+name: WhereIBeen
+options:
+  bundleIdPrefix: com.whereibeen
+  deploymentTarget:
+    iOS: 15.0
+  xcodeVersion: "14.0"
+  createIntermediateGroups: true
+targets:
+  WhereIBeen:
+    type: application
+    platform: iOS
+    sources:
+      - path: WhereIBeen
+    settings:
+      base:
+        INFOPLIST_FILE: WhereIBeen/Info.plist
+        PRODUCT_BUNDLE_IDENTIFIER: com.whereibeen.app
+        CODE_SIGN_IDENTITY: "iPhone Developer"
+        CODE_SIGN_STYLE: Manual
+        DEVELOPMENT_TEAM:
+        PROVISIONING_PROFILE_SPECIFIER: ""
+        ENABLE_BITCODE: NO
+        TARGETED_DEVICE_FAMILY: 1
+    info:
+      path: WhereIBeen/Info.plist
+      properties:
+        CFBundleDisplayName: WhereIBeen
+        CFBundleShortVersionString: 1.0.0
+        CFBundleVersion: 1
+        UILaunchStoryboardName: LaunchScreen
+        UIMainStoryboardFile: ""
+        UIRequiresFullScreen: true
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        NSLocationWhenInUseUsageDescription: WhereIBeen needs your location to track the areas you've explored.
+        NSLocationAlwaysAndWhenInUseUsageDescription: WhereIBeen needs your location to track the areas you've explored, even when the app is in the background.
+        NSLocationAlwaysUsageDescription: WhereIBeen needs your location to track the areas you've explored, even when the app is in the background.
+        UIBackgroundModes:
+          - location

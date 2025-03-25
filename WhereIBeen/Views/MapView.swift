@@ -19,7 +19,7 @@ struct MapView: UIViewRepresentable {
         
         // Configure map settings
         mapView.showsCompass = false
-        mapView.showsUserLocation = false
+        mapView.showsUserLocation = true
         mapView.isPitchEnabled = false
         
         // Add a gesture recognizer for drag gestures

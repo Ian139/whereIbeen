@@ -73,12 +73,19 @@ class MapViewModel: ObservableObject {
         self.mapOverlayService = mapOverlayService
         self.locationService = locationService
         
+        // Set initial region to default
+        mapArea.currentRegion = MapArea.defaultRegion
+        
         // Initialize services
         setupLocationServices()
         setupErrorHandling()
         
-        // Start location tracking immediately
+        // Start location tracking immediately - this will update the region
+        // when a valid location is obtained
         startExploration()
+        
+        // Load saved locations from CSV
+        loadSavedLocations()
     }
     
     deinit {
@@ -137,13 +144,55 @@ class MapViewModel: ObservableObject {
         self.mapView = mapView
     }
     
+    /// Handle location updates from location service
+    private func handleLocationUpdate(_ location: CLLocation) {
+        // Clear any location-related errors when we get a valid update
+        if let error = locationService.error, error.isLocationRelated {
+            locationService.error = nil
+        }
+        
+        // Update user's location in map area
+        let coordinate = location.coordinate
+        userLocation = coordinate
+        
+        // Create a circle region for auto-erasing
+        eraseAroundUserLocation(location.coordinate)
+        
+        // If we're in following mode, update the map view region
+        if isFollowingUser {
+            centerOnUser()
+        }
+    }
+    
+    /// Create a circle region around the user's location to mark as explored
+    private func eraseAroundUserLocation(_ coordinate: CLLocationCoordinate2D) {
+        // Add erased region at the user's location
+        addErasedRegion(at: coordinate, withRadius: MapArea.autoEraserRadiusMiles)
+    }
+    
+    /// Center the map on the user's current location
+    func centerOnUser() {
+        if let updatedRegion = mapArea.centerOnUserLocation() {
+            region = updatedRegion
+        } else {
+            // Use default region if user location is not available
+            print("No user location available, using default region")
+            region = MapArea.defaultRegion
+        }
+    }
+    
     /// Start location services and exploration tracking
     func startExploration() {
-        // Use the new start method instead of requestLocationAuthorization
+        // Always force a location permission check/request on startup
         locationService.start()
         
+        // Only start auto-erasing if location is available
         if locationService.isLocationAvailable() {
             startAutoErasing()
+        } else {
+            // Set to default region if no location available
+            print("Location not available, using default region")
+            region = MapArea.defaultRegion
         }
     }
     
@@ -153,13 +202,6 @@ class MapViewModel: ObservableObject {
         
         if isFollowingUser, let _ = userLocation {
             centerOnUser()
-        }
-    }
-    
-    /// Center the map on the user's current location
-    func centerOnUser() {
-        if let updatedRegion = mapArea.centerOnUserLocation() {
-            region = updatedRegion
         }
     }
     
@@ -193,21 +235,6 @@ class MapViewModel: ObservableObject {
             region = newRegion
             updateExploredPercentage()
         }
-    }
-    
-    /// Handle location update from the location service
-    /// - Parameter location: The updated location
-    private func handleLocationUpdate(_ location: CLLocation) {
-        let coordinate = location.coordinate
-        userLocation = coordinate
-        
-        // Auto-center on user if following is enabled
-        if isFollowingUser {
-            centerOnUser()
-        }
-        
-        // Add erased region at the user's location
-        addErasedRegion(at: coordinate, withRadius: MapArea.autoEraserRadiusMiles)
     }
     
     /// Start the timer for automatic erasing based on user location
@@ -403,5 +430,49 @@ class MapViewModel: ObservableObject {
     private func updateExploredPercentage() {
         let totalErasedArea = mapArea.calculateErasedArea()
         percentExplored = mapOverlayService.calculateExploredPercentage(erasedArea: totalErasedArea)
+    }
+    
+    /// Load saved locations from CSV
+    func loadSavedLocations() {
+        // Try to load the CSV data
+        guard let csvData = DataLoader.shared.loadCSV(fileName: "default") else {
+            print("Failed to locate resource \"default.csv\"")
+            return
+        }
+        
+        let parsedData = DataLoader.shared.parseCSV(data: csvData)
+        print("Parsed \(parsedData.count) locations from CSV")
+        
+        for locationData in parsedData {
+            do {
+                // Make sure latitude and longitude exist
+                guard let latString = locationData["latitude"],
+                      let lonString = locationData["longitude"] else {
+                    print("Missing latitude or longitude keys in data: \(locationData)")
+                    continue
+                }
+                
+                // Safely convert to Double
+                guard let lat = Double(latString),
+                      let lon = Double(lonString) else {
+                    print("Invalid location data, couldn't convert to Double: \(locationData)")
+                    continue
+                }
+                
+                let coordinate = CLLocationCoordinate2D(latitude: lat, longitude: lon)
+                
+                // Make sure the coordinate is valid
+                guard CLLocationCoordinate2DIsValid(coordinate) else {
+                    print("Invalid coordinate: \(lat), \(lon)")
+                    continue
+                }
+                
+                // Add this coordinate as an explored region
+                addErasedRegion(at: coordinate, withRadius: MapArea.autoEraserRadiusMiles)
+            } catch {
+                print("Error processing location data: \(error)")
+                continue
+            }
+        }
     }
 } 

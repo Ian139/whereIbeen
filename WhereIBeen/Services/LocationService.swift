@@ -31,6 +31,16 @@ enum LocationServiceError: Error, LocalizedError {
             return "Location error: \(error.localizedDescription). Please try again."
         }
     }
+    
+    /// Determines if this error is related to location services
+    var isLocationRelated: Bool {
+        switch self {
+        case .locationUnknown, .accuracyTooLow:
+            return true
+        default:
+            return false
+        }
+    }
 }
 
 /// Service for handling location-related functionality
@@ -58,6 +68,10 @@ class LocationService: NSObject, ObservableObject {
         locationManager.desiredAccuracy = kCLLocationAccuracyBest
         locationManager.distanceFilter = 10 // Update when the user moves 10 meters
         
+        // Mobile-specific enhancements
+        locationManager.activityType = .fitness // Better for continuous tracking
+        locationManager.pausesLocationUpdatesAutomatically = false // Prevent automatic pausing
+        
         // Get initial authorization status
         if #available(iOS 14.0, *) {
             authorizationStatus = locationManager.authorizationStatus
@@ -74,18 +88,26 @@ class LocationService: NSObject, ObservableObject {
     
     /// Start location services - call this from your view model or controller
     func start() {
-        // Don't check location services on main thread - wait for delegate callbacks instead
-        switch authorizationStatus {
-        case .notDetermined:
-            locationManager.requestWhenInUseAuthorization()
-        case .restricted, .denied:
-            self.error = .authorizationDenied
-            self.onError?(.authorizationDenied)
-        case .authorizedWhenInUse, .authorizedAlways:
-            // Already authorized, start updating
-            startLocationUpdates()
-        @unknown default:
-            break
+        // Move potentially blocking operations to background queue
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let self = self else { return }
+            
+            // Check if location services are enabled system-wide
+            if !CLLocationManager.locationServicesEnabled() {
+                DispatchQueue.main.async {
+                    self.error = .locationServicesDisabled
+                    self.onError?(.locationServicesDisabled)
+                }
+                return
+            }
+            
+            DispatchQueue.main.async {
+                // Request authorization on main thread (UI operation)
+                self.locationManager.requestWhenInUseAuthorization()
+                
+                // The actual status check and updates will happen in the delegate methods
+                // which are called automatically after authorization changes
+            }
         }
     }
     
@@ -201,6 +223,7 @@ extension LocationService: CLLocationManagerDelegate {
         switch manager.authorizationStatus {
         case .authorizedWhenInUse, .authorizedAlways:
             // Start location updates
+            error = nil
             startLocationUpdates()
         case .denied, .restricted:
             stop()
@@ -228,6 +251,7 @@ extension LocationService: CLLocationManagerDelegate {
         switch status {
         case .authorizedWhenInUse, .authorizedAlways:
             // Start location updates
+            error = nil
             startLocationUpdates()
         case .denied, .restricted:
             stop()

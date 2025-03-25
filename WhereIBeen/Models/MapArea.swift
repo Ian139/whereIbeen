@@ -66,8 +66,8 @@ struct MapArea {
     
     /// Default starting region
     static let defaultRegion = MKCoordinateRegion(
-        center: CLLocationCoordinate2D(latitude: 34.0522, longitude: -118.2437),
-        span: MKCoordinateSpan(latitudeDelta: 0.0922, longitudeDelta: 0.0421)
+        center: CLLocationCoordinate2D(latitude: 37.7749, longitude: -122.4194), // San Francisco
+        span: MKCoordinateSpan(latitudeDelta: 0.1, longitudeDelta: 0.1)
     )
     
     /// Merge nearby regions to optimize storage and calculations

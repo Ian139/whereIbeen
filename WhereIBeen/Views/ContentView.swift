@@ -1,5 +1,6 @@
 import SwiftUI
 import MapKit
+import UIKit
 
 struct ContentView: View {
     @StateObject private var viewModel = MapViewModel()
@@ -37,7 +38,7 @@ struct ContentView: View {
             // Error overlay for persistent errors
             if showRetryButton {
                 VStack {
-                    Text("Location Error")
+                    Text("Location Access Required")
                         .font(.headline)
                         .foregroundColor(.white)
                     
@@ -52,7 +53,7 @@ struct ContentView: View {
                         viewModel.retryLocationServices()
                         // Don't dismiss the view yet until we get a successful location
                     }) {
-                        Text("Retry")
+                        Text("Grant Location Access")
                             .fontWeight(.medium)
                             .padding(.horizontal, 24)
                             .padding(.vertical, 8)
@@ -60,6 +61,22 @@ struct ContentView: View {
                             .foregroundColor(.white)
                             .cornerRadius(8)
                     }
+                    
+                    // Add a secondary action to open settings
+                    Button(action: {
+                        if let url = URL(string: UIApplication.openSettingsURLString) {
+                            UIApplication.shared.open(url)
+                        }
+                    }) {
+                        Text("Open Settings")
+                            .fontWeight(.medium)
+                            .padding(.horizontal, 24)
+                            .padding(.vertical, 8)
+                            .background(Color.gray)
+                            .foregroundColor(.white)
+                            .cornerRadius(8)
+                    }
+                    .padding(.top, 8)
                 }
                 .padding()
                 .background(Color.black.opacity(0.75))
@@ -93,6 +110,9 @@ struct ContentView: View {
             // Hide error UI when location is restored
             showRetryButton = false
             showLocationErrorAlert = false
+            
+            // Force center on user when location is first restored
+            viewModel.centerOnUser()
         }
     }
 }
@@ -159,6 +179,7 @@ struct MapContainer: UIViewRepresentable {
         mapView.showsCompass = false
         mapView.showsUserLocation = true
         mapView.isPitchEnabled = false
+        mapView.userTrackingMode = .follow // Enable tracking mode initially
         mapView.delegate = context.coordinator
         
         return mapView
