@@ -30,13 +30,12 @@ class MapViewModel: ObservableObject {
         }
     }
     
-    // Error publishers
+    // Error and location restored publishers
     private let locationErrorSubject = PassthroughSubject<LocationServiceError, Never>()
     var locationErrorPublisher: AnyPublisher<LocationServiceError, Never> {
         locationErrorSubject.eraseToAnyPublisher()
     }
     
-    // Location restored publisher
     private let locationRestoredSubject = PassthroughSubject<Void, Never>()
     var locationRestoredPublisher: AnyPublisher<Void, Never> {
         locationRestoredSubject.eraseToAnyPublisher()
@@ -51,9 +50,7 @@ class MapViewModel: ObservableObject {
     
     // Timer for auto-erasing based on location
     private var autoErasingTimer: Timer?
-    private var locationUpdateSubscription: AnyCancellable?
-    private var errorSubscription: AnyCancellable?
-    private var locationSubscription: AnyCancellable?
+    private var subscriptions = Set<AnyCancellable>()
     private var lastLocation: CLLocation?
     
     // Computed properties
@@ -92,57 +89,34 @@ class MapViewModel: ObservableObject {
         self.mapOverlayService = mapOverlayService
         self.locationService = locationService
         
-        // Initialize services
-        setupLocationServices()
-        setupErrorHandling()
-        
-        // Start location tracking immediately
+        setupSubscriptions()
         startExploration()
     }
     
     deinit {
         stopAutoErasing()
         locationService.stop()
-        locationUpdateSubscription?.cancel()
-        errorSubscription?.cancel()
-        locationSubscription?.cancel()
+        subscriptions.forEach { $0.cancel() }
     }
     
     /// Set up location services and subscriptions
-    private func setupLocationServices() {
+    private func setupSubscriptions() {
         // Subscribe to location updates
-        locationUpdateSubscription = locationService.$currentLocation
+        locationService.$currentLocation
             .compactMap { $0 }
             .sink { [weak self] location in
                 self?.handleLocationUpdate(location)
-            }
-        
-        // Listen for successful location updates
-        locationSubscription = locationService.$currentLocation
-            .compactMap { $0 }
-            .sink { [weak self] _ in
-                // When we get a valid location, notify that location services are restored
                 self?.locationRestoredSubject.send()
             }
+            .store(in: &subscriptions)
         
-        // Set up location update callback
-        locationService.onLocationUpdate = { [weak self] location in
-            self?.handleLocationUpdate(location)
-            self?.locationRestoredSubject.send()
-        }
-    }
-    
-    /// Set up error handling
-    private func setupErrorHandling() {
-        errorSubscription = locationService.$error
+        // Subscribe to location errors
+        locationService.$error
             .compactMap { $0 }
             .sink { [weak self] error in
                 self?.locationErrorSubject.send(error)
             }
-        
-        locationService.onError = { [weak self] error in
-            self?.locationErrorSubject.send(error)
-        }
+            .store(in: &subscriptions)
     }
     
     /// Retry location services after an error
@@ -158,7 +132,6 @@ class MapViewModel: ObservableObject {
     
     /// Start location services and exploration tracking
     func startExploration() {
-        // Use the new start method instead of requestLocationAuthorization
         locationService.start()
         
         if locationService.isLocationAvailable() {
@@ -185,17 +158,13 @@ class MapViewModel: ObservableObject {
     /// Handle changes to the map region
     /// - Parameter newRegion: The new region after user interaction
     func handleRegionChange(_ newRegion: MKCoordinateRegion) {
-        // Enforce zoom limits - use more restrictive limits to prevent performance issues
+        // Enforce zoom limits to prevent performance issues
         var limitedRegion = newRegion
+        let maxZoomDelta = 75.0
         
-        // Set even stricter limits for very extreme zoom levels
-        let maxZoomDelta = 75.0 // Lower the maximum (most zoomed out) limit
-        
-        // Only enforce maximum zoom out limit
         limitedRegion.span.latitudeDelta = min(newRegion.span.latitudeDelta, maxZoomDelta)
         limitedRegion.span.longitudeDelta = min(newRegion.span.longitudeDelta, maxZoomDelta)
         
-        // Compare span values individually instead of using != operator
         if limitedRegion.span.latitudeDelta != newRegion.span.latitudeDelta || 
            limitedRegion.span.longitudeDelta != newRegion.span.longitudeDelta {
             region = limitedRegion
@@ -235,7 +204,6 @@ class MapViewModel: ObservableObject {
         let lonIndex = Int(floor(coordinate.longitude / gridSize))
         
         // Add a 3x3 grid of cells centered on the current location
-        // This creates a more natural exploration area around the user
         for dLat in -1...1 {
             for dLon in -1...1 {
                 let cell = GridCell(latIndex: latIndex + dLat, lonIndex: lonIndex + dLon)
@@ -267,17 +235,6 @@ class MapViewModel: ObservableObject {
         addGridCellsAroundLocation(coordinate)
     }
     
-    /// Calculate distance between two coordinates in meters
-    /// - Parameters:
-    ///   - source: The source coordinate
-    ///   - destination: The destination coordinate
-    /// - Returns: Distance in meters
-    private func calculateDistance(from source: CLLocationCoordinate2D, to destination: CLLocationCoordinate2D) -> Double {
-        let sourceLocation = CLLocation(latitude: source.latitude, longitude: source.longitude)
-        let destinationLocation = CLLocation(latitude: destination.latitude, longitude: destination.longitude)
-        return sourceLocation.distance(from: destinationLocation)
-    }
-    
     /// Reset the map to its default state
     func resetMap() {
         erasedRegions = []
@@ -289,7 +246,6 @@ class MapViewModel: ObservableObject {
         region = MapArea.defaultRegion
         lastLocation = nil
         
-        // Don't stop location tracking after reset
         if let location = userLocation {
             centerOnUser()
         }
@@ -361,45 +317,5 @@ class MapViewModel: ObservableObject {
         } else {
             return MKPolygon(coordinates: bounds, count: bounds.count)
         }
-    }
-    
-    /// Create coordinates for a square centered at a point
-    private func createSquareCoordinates(center: CLLocationCoordinate2D, sideLength: Double) -> [CLLocationCoordinate2D] {
-        // Convert meters to approximate degrees at this latitude
-        let metersPerDegree = 111319.9 // approximate meters per degree at equator
-        let latDelta = sideLength / metersPerDegree
-        let lonDelta = sideLength / (metersPerDegree * cos(center.latitude * .pi / 180.0))
-        
-        return [
-            CLLocationCoordinate2D(
-                latitude: center.latitude - latDelta/2,
-                longitude: center.longitude - lonDelta/2
-            ),
-            CLLocationCoordinate2D(
-                latitude: center.latitude - latDelta/2,
-                longitude: center.longitude + lonDelta/2
-            ),
-            CLLocationCoordinate2D(
-                latitude: center.latitude + latDelta/2,
-                longitude: center.longitude + lonDelta/2
-            ),
-            CLLocationCoordinate2D(
-                latitude: center.latitude + latDelta/2,
-                longitude: center.longitude - lonDelta/2
-            )
-        ]
-    }
-    
-    /// Check if a coordinate is within the given bounds
-    private func isCoordinateInBounds(_ coordinate: CLLocationCoordinate2D, bounds: [CLLocationCoordinate2D]) -> Bool {
-        let minLat = min(bounds[0].latitude, bounds[1].latitude, bounds[2].latitude, bounds[3].latitude)
-        let maxLat = max(bounds[0].latitude, bounds[1].latitude, bounds[2].latitude, bounds[3].latitude)
-        let minLon = min(bounds[0].longitude, bounds[1].longitude, bounds[2].longitude, bounds[3].longitude)
-        let maxLon = max(bounds[0].longitude, bounds[1].longitude, bounds[2].longitude, bounds[3].longitude)
-        
-        return coordinate.latitude >= minLat &&
-               coordinate.latitude <= maxLat &&
-               coordinate.longitude >= minLon &&
-               coordinate.longitude <= maxLon
     }
 } 

@@ -46,10 +46,6 @@ class LocationService: NSObject, ObservableObject {
     private let maxRetries = 5
     private var retryTimer: Timer?
     
-    // Callback for location updates
-    var onLocationUpdate: ((CLLocation) -> Void)?
-    var onError: ((LocationServiceError) -> Void)?
-    
     override init() {
         super.init()
         
@@ -58,8 +54,7 @@ class LocationService: NSObject, ObservableObject {
         locationManager.desiredAccuracy = kCLLocationAccuracyBest
         locationManager.distanceFilter = 10 // Update when the user moves 10 meters
         
-        // Get initial authorization status through delegate methods
-        // We'll avoid direct checks that can block the main thread
+        // Get initial authorization status
         if #available(iOS 14.0, *) {
             authorizationStatus = locationManager.authorizationStatus
         } else {
@@ -79,19 +74,14 @@ class LocationService: NSObject, ObservableObject {
         self.error = nil
         
         // Request authorization based on current status
-        // Let the delegate methods handle the response
         switch authorizationStatus {
         case .notDetermined:
-            // Request authorization
             locationManager.requestWhenInUseAuthorization()
         case .restricted:
             self.error = .authorizationRestricted
-            self.onError?(.authorizationRestricted)
         case .denied:
             self.error = .authorizationDenied
-            self.onError?(.authorizationDenied)
         case .authorizedWhenInUse, .authorizedAlways:
-            // Already authorized, start updating
             startLocationUpdates()
         @unknown default:
             break
@@ -130,7 +120,6 @@ class LocationService: NSObject, ObservableObject {
     
     /// Check if location services are available and authorized
     func isLocationAvailable() -> Bool {
-        // Only rely on the published authorizationStatus
         return authorizationStatus == .authorizedWhenInUse || authorizationStatus == .authorizedAlways
     }
     
@@ -150,10 +139,7 @@ class LocationService: NSObject, ObservableObject {
         // Only show error if we've exceeded retry attempts
         if retryCount > maxRetries {
             self.error = .locationUnknown
-            self.onError?(.locationUnknown)
         }
-        
-        print("Retrying location (attempt \(retryCount)/\(maxRetries)) in \(delay) seconds")
         
         // Schedule retry with more aggressive settings
         retryTimer = Timer.scheduledTimer(withTimeInterval: delay, repeats: false) { [weak self] _ in
@@ -182,18 +168,13 @@ extension LocationService: CLLocationManagerDelegate {
         
         // Filter out inaccurate locations
         if location.horizontalAccuracy < 0 || location.horizontalAccuracy > accuracyThreshold {
-            print("Location accuracy too low: \(location.horizontalAccuracy)m")
             if retryCount < maxRetries {
                 handleLocationUnknown()
             } else {
-                let error = LocationServiceError.accuracyTooLow(accuracy: location.horizontalAccuracy)
-                self.error = error
-                onError?(error)
+                error = .accuracyTooLow(accuracy: location.horizontalAccuracy)
             }
             return
         }
-        
-        print("Location update received: \(location.coordinate.latitude), \(location.coordinate.longitude) - accuracy: \(location.horizontalAccuracy)m")
         
         // Reset retry count on success
         retryCount = 0
@@ -206,7 +187,6 @@ extension LocationService: CLLocationManagerDelegate {
         
         // Update the current location
         currentLocation = location
-        onLocationUpdate?(location)
     }
     
     func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
@@ -214,7 +194,6 @@ extension LocationService: CLLocationManagerDelegate {
             switch clError.code {
             case .denied:
                 self.error = .authorizationDenied
-                onError?(.authorizationDenied)
             case .locationUnknown:
                 handleLocationUnknown()
             default:
@@ -222,30 +201,29 @@ extension LocationService: CLLocationManagerDelegate {
                     handleLocationUnknown()
                 } else {
                     self.error = .unknown(error: clError)
-                    onError?(.unknown(error: clError))
                 }
             }
         } else {
             self.error = .unknown(error: error)
-            onError?(.unknown(error: error))
         }
     }
     
-    // iOS 14 and above
-    @available(iOS 14.0, *)
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
         // Update authorization status
-        authorizationStatus = manager.authorizationStatus
+        if #available(iOS 14.0, *) {
+            authorizationStatus = manager.authorizationStatus
+        } else {
+            authorizationStatus = CLLocationManager.authorizationStatus()
+        }
         
         // Handle the new authorization status
-        switch manager.authorizationStatus {
+        switch authorizationStatus {
         case .authorizedWhenInUse, .authorizedAlways:
             // Start location updates
             startLocationUpdates()
         case .denied, .restricted:
             stop()
             error = .authorizationDenied
-            onError?(.authorizationDenied)
         case .notDetermined:
             // Wait for user's response
             break
@@ -272,7 +250,6 @@ extension LocationService: CLLocationManagerDelegate {
         case .denied, .restricted:
             stop()
             error = .authorizationDenied
-            onError?(.authorizationDenied)
         case .notDetermined:
             // Wait for user's response
             break
