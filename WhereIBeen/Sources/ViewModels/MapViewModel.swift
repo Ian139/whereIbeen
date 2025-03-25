@@ -3,10 +3,32 @@ import MapKit
 import Combine
 import CoreLocation
 
+/// Represents a cell in the exploration grid
+struct GridCell: Hashable {
+    let latIndex: Int
+    let lonIndex: Int
+}
+
 class MapViewModel: ObservableObject {
     // Published properties that the View can observe
     @Published var mapArea = MapArea()
     @Published var totalMiles: Double = 0
+    @Published var level: Int = 1
+    @Published var squaresUntilNextLevel: Int = 100
+    
+    // Grid configuration
+    private let gridSize: Double = 0.003 // approximately 0.207 miles at the equator
+    private var exploredGridCells: Set<GridCell> = [] {
+        didSet {
+            // Update level when grid cells change
+            let totalSquares = exploredGridCells.count
+            let newLevel = max(1, (totalSquares / 100) + 1)
+            if newLevel != level {
+                level = newLevel
+            }
+            squaresUntilNextLevel = (level * 100) - totalSquares
+        }
+    }
     
     // Error publishers
     private let locationErrorSubject = PassthroughSubject<LocationServiceError, Never>()
@@ -201,8 +223,25 @@ class MapViewModel: ObservableObject {
             centerOnUser()
         }
         
-        // Add erased region at the user's location
-        addErasedRegion(at: coordinate, withRadius: MapArea.autoEraserRadiusMiles)
+        // Add the current grid cell and surrounding cells
+        addGridCellsAroundLocation(coordinate)
+    }
+    
+    /// Add grid cells around a location to create a square exploration area
+    /// - Parameter coordinate: The center coordinate
+    private func addGridCellsAroundLocation(_ coordinate: CLLocationCoordinate2D) {
+        // Calculate the center cell indices
+        let latIndex = Int(floor(coordinate.latitude / gridSize))
+        let lonIndex = Int(floor(coordinate.longitude / gridSize))
+        
+        // Add a 3x3 grid of cells centered on the current location
+        // This creates a more natural exploration area around the user
+        for dLat in -1...1 {
+            for dLon in -1...1 {
+                let cell = GridCell(latIndex: latIndex + dLat, lonIndex: lonIndex + dLon)
+                exploredGridCells.insert(cell)
+            }
+        }
     }
     
     /// Start the timer for automatic erasing based on user location
@@ -222,24 +261,10 @@ class MapViewModel: ObservableObject {
     /// Add a new erased region at the specified coordinate
     /// - Parameters:
     ///   - coordinate: The center coordinate of the region to erase
-    ///   - radius: The radius of the region in miles (ignored, always uses 0.25 miles)
+    ///   - radius: The radius of the region in miles (ignored, using grid cells instead)
     private func addErasedRegion(at coordinate: CLLocationCoordinate2D, withRadius radius: Double) {
-        let fixedRadius = 0.25 // Always use 0.25 miles
-        let newRegion = ErasedRegion(
-            center: coordinate,
-            radiusMiles: fixedRadius
-        )
-        
-        // Only add if we don't already have a very similar region
-        // This helps prevent too many overlapping regions
-        let isNearlySame = erasedRegions.contains { existingRegion in
-            let distance = calculateDistance(from: existingRegion.center, to: coordinate)
-            return distance < (fixedRadius * 1609.34 * 0.5) // If within half the radius
-        }
-        
-        if !isNearlySame {
-            erasedRegions.append(newRegion)
-        }
+        // Convert to grid-based exploration
+        addGridCellsAroundLocation(coordinate)
     }
     
     /// Calculate distance between two coordinates in meters
@@ -257,7 +282,10 @@ class MapViewModel: ObservableObject {
     func resetMap() {
         erasedRegions = []
         exploredArea = []
+        exploredGridCells = []
         totalMiles = 0
+        level = 1
+        squaresUntilNextLevel = 100
         region = MapArea.defaultRegion
         lastLocation = nil
         
@@ -292,21 +320,44 @@ class MapViewModel: ObservableObject {
             )
         ]
         
-        // Convert erased regions to squares
-        var squarePolygons: [MKPolygon] = []
-        let gridSize = 0.25 * 1609.34 // 0.25 miles in meters
+        // Calculate visible grid cell indices
+        let minLat = bounds[0].latitude
+        let maxLat = bounds[2].latitude
+        let minLon = bounds[0].longitude
+        let maxLon = bounds[2].longitude
         
-        for region in erasedRegions {
-            // Only process regions that are visible in the current viewport
-            if isCoordinateInBounds(region.center, bounds: bounds) {
-                // Create a square for this region
-                let squareCoords = createSquareCoordinates(center: region.center, sideLength: gridSize)
-                squarePolygons.append(MKPolygon(coordinates: squareCoords, count: squareCoords.count))
+        let minLatIndex = Int(floor(minLat / gridSize))
+        let maxLatIndex = Int(floor(maxLat / gridSize))
+        let minLonIndex = Int(floor(minLon / gridSize))
+        let maxLonIndex = Int(floor(maxLon / gridSize))
+        
+        // Create square interior polygons for visible explored cells
+        var interiorPolygons: [MKPolygon] = []
+        
+        for cell in exploredGridCells {
+            // Only process cells that are visible in the current viewport
+            if cell.latIndex >= minLatIndex && cell.latIndex <= maxLatIndex &&
+               cell.lonIndex >= minLonIndex && cell.lonIndex <= maxLonIndex {
+                
+                // Convert grid indices back to coordinates
+                let lat = Double(cell.latIndex) * gridSize
+                let lon = Double(cell.lonIndex) * gridSize
+                
+                // Create square coordinates
+                let squareCoords = [
+                    CLLocationCoordinate2D(latitude: lat, longitude: lon),
+                    CLLocationCoordinate2D(latitude: lat, longitude: lon + gridSize),
+                    CLLocationCoordinate2D(latitude: lat + gridSize, longitude: lon + gridSize),
+                    CLLocationCoordinate2D(latitude: lat + gridSize, longitude: lon),
+                    CLLocationCoordinate2D(latitude: lat, longitude: lon) // Close the polygon
+                ]
+                
+                interiorPolygons.append(MKPolygon(coordinates: squareCoords, count: squareCoords.count))
             }
         }
         
-        if !squarePolygons.isEmpty {
-            return MKPolygon(coordinates: bounds, count: bounds.count, interiorPolygons: squarePolygons)
+        if !interiorPolygons.isEmpty {
+            return MKPolygon(coordinates: bounds, count: bounds.count, interiorPolygons: interiorPolygons)
         } else {
             return MKPolygon(coordinates: bounds, count: bounds.count)
         }
