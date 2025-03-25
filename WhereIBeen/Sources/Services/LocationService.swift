@@ -43,7 +43,7 @@ class LocationService: NSObject, ObservableObject {
     // Location manager
     private let locationManager = CLLocationManager()
     private var retryCount = 0
-    private let maxRetries = 3
+    private let maxRetries = 5
     private var retryTimer: Timer?
     
     // Callback for location updates
@@ -58,7 +58,8 @@ class LocationService: NSObject, ObservableObject {
         locationManager.desiredAccuracy = kCLLocationAccuracyBest
         locationManager.distanceFilter = 10 // Update when the user moves 10 meters
         
-        // Get initial authorization status
+        // Get initial authorization status through delegate methods
+        // We'll avoid direct checks that can block the main thread
         if #available(iOS 14.0, *) {
             authorizationStatus = locationManager.authorizationStatus
         } else {
@@ -74,11 +75,19 @@ class LocationService: NSObject, ObservableObject {
     
     /// Start location services - call this from your view model or controller
     func start() {
-        // Don't check location services on main thread - wait for delegate callbacks instead
+        // Reset error state when starting
+        self.error = nil
+        
+        // Request authorization based on current status
+        // Let the delegate methods handle the response
         switch authorizationStatus {
         case .notDetermined:
+            // Request authorization
             locationManager.requestWhenInUseAuthorization()
-        case .restricted, .denied:
+        case .restricted:
+            self.error = .authorizationRestricted
+            self.onError?(.authorizationRestricted)
+        case .denied:
             self.error = .authorizationDenied
             self.onError?(.authorizationDenied)
         case .authorizedWhenInUse, .authorizedAlways:
@@ -95,8 +104,22 @@ class LocationService: NSObject, ObservableObject {
         retryCount = 0
         retryTimer?.invalidate()
         
+        // Stop updates first to ensure a clean start
+        locationManager.stopUpdatingLocation()
+        
+        // Configure for high accuracy
+        locationManager.desiredAccuracy = kCLLocationAccuracyBest
+        locationManager.activityType = .fitness // More aggressive tracking
+        
         // Start standard location updates
         locationManager.startUpdatingLocation()
+        
+        // Start a backup timer in case we don't get any location update
+        retryTimer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: false) { [weak self] _ in
+            guard let self = self, self.currentLocation == nil else { return }
+            // If we haven't received a location after 5 seconds, try again
+            self.handleLocationUnknown()
+        }
     }
     
     /// Stop updating location
@@ -107,7 +130,7 @@ class LocationService: NSObject, ObservableObject {
     
     /// Check if location services are available and authorized
     func isLocationAvailable() -> Bool {
-        // Don't check here, rely on the published authorizationStatus instead
+        // Only rely on the published authorizationStatus
         return authorizationStatus == .authorizedWhenInUse || authorizationStatus == .authorizedAlways
     }
     
@@ -130,9 +153,20 @@ class LocationService: NSObject, ObservableObject {
             self.onError?(.locationUnknown)
         }
         
-        // Schedule retry
+        print("Retrying location (attempt \(retryCount)/\(maxRetries)) in \(delay) seconds")
+        
+        // Schedule retry with more aggressive settings
         retryTimer = Timer.scheduledTimer(withTimeInterval: delay, repeats: false) { [weak self] _ in
             guard let self = self, self.isLocationAvailable() else { return }
+            // Stop updates first
+            self.locationManager.stopUpdatingLocation()
+            
+            // Try with different accuracy if we're having trouble
+            if self.retryCount > 2 {
+                self.locationManager.desiredAccuracy = kCLLocationAccuracyHundredMeters
+            }
+            
+            // Restart location updates
             self.locationManager.startUpdatingLocation()
         }
     }
@@ -143,8 +177,12 @@ extension LocationService: CLLocationManagerDelegate {
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         guard let location = locations.last else { return }
         
+        // Relax accuracy requirements if we're having trouble
+        let accuracyThreshold = retryCount > 2 ? 1000.0 : 500.0
+        
         // Filter out inaccurate locations
-        if location.horizontalAccuracy < 0 || location.horizontalAccuracy > 500 {
+        if location.horizontalAccuracy < 0 || location.horizontalAccuracy > accuracyThreshold {
+            print("Location accuracy too low: \(location.horizontalAccuracy)m")
             if retryCount < maxRetries {
                 handleLocationUnknown()
             } else {
@@ -154,6 +192,8 @@ extension LocationService: CLLocationManagerDelegate {
             }
             return
         }
+        
+        print("Location update received: \(location.coordinate.latitude), \(location.coordinate.longitude) - accuracy: \(location.horizontalAccuracy)m")
         
         // Reset retry count on success
         retryCount = 0

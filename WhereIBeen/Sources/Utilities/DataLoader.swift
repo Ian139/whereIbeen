@@ -29,12 +29,8 @@ class DataLoader {
         } catch {
             print("Failed to load \(fileName).csv: \(error)")
             
-            // If it's the default file, provide basic empty structure
-            if fileName == "default" {
-                return "id,name,date,lat,long\n"
-            }
-            
-            return nil
+            // Instead of fallback to default file, return empty structure for any file
+            return "id,name,date,lat,long\n"
         }
     }
     

@@ -8,16 +8,20 @@ struct ContentView: View {
     @State private var showRetryButton = false
     
     var body: some View {
-        ZStack {
+        ZStack(alignment: .top) {
             // Map
             MapContainer(viewModel: viewModel)
                 .edgesIgnoringSafeArea(.all)
+            
+            // Menu Overlay at the top
+            MenuView()
+                .zIndex(1) // Ensure menu is above other content
             
             // UI Overlay
             VStack {
                 Spacer()
                 
-                // Bottom controls
+                // Bottom controls moved up with additional bottom padding
                 HStack {
                     // Percentage View
                     ExplorationPercentageView(percentage: viewModel.percentExplored)
@@ -28,11 +32,8 @@ struct ContentView: View {
                     CompassButton(action: viewModel.centerOnUser)
                 }
                 .padding()
+                .padding(.bottom, 50) // Add extra padding to move controls up above the tab bar
             }
-            
-            // Menu Overlay
-            MenuView()
-                .frame(maxHeight: .infinity, alignment: .top)
             
             // Error overlay for persistent errors
             if showRetryButton {

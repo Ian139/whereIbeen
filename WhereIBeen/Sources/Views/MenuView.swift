@@ -1,124 +1,106 @@
 import SwiftUI
 
 struct MenuView: View {
-    @State private var isMenuVisible = false
-    @State private var dragOffset: CGFloat = 0
-    private let menuHeight: CGFloat = 200
+    @State private var selectedTab = 0
     
     var body: some View {
-        GeometryReader { geometry in
-            VStack(spacing: 0) {
-                // Fill the gap at the top
-                Color(UIColor.systemBackground)
-                    .frame(height: geometry.safeAreaInsets.top)
-                
-                // Menu Items
-                VStack(spacing: 16) {
-                    MenuButton(icon: "person.circle", title: "Profile")
-                    MenuButton(icon: "map", title: "Trips")
-                    MenuButton(icon: "person.2", title: "Friends")
-                    MenuButton(icon: "gear", title: "Settings")
+        VStack {
+            Spacer() // Pushes the tab bar to the bottom
+            
+            // Bottom Tab Bar
+            HStack(spacing: 0) {
+                ForEach(0..<4) { index in
+                    TabButton(
+                        icon: getIcon(for: index),
+                        title: getTitle(for: index),
+                        isSelected: selectedTab == index
+                    ) {
+                        selectedTab = index
+                    }
                 }
-                .padding(.horizontal)
-                .padding(.top, 16)
-                .padding(.bottom, 8)
-                
-                // Handle at bottom
-                RoundedRectangle(cornerRadius: 2.5)
-                    .fill(Color.gray.opacity(0.5))
-                    .frame(width: 40, height: 6)
-                    .padding(.bottom, 16)
-                    .accessibilityHidden(true)
             }
-            .frame(maxWidth: .infinity)
-            .frame(height: menuHeight + geometry.safeAreaInsets.top)
+            .frame(height: 80)
             .background(Color(UIColor.systemBackground))
-            .offset(y: -(menuHeight + geometry.safeAreaInsets.top) + dragOffset + (isMenuVisible ? (menuHeight + geometry.safeAreaInsets.top) : 0))
-            .gesture(
-                DragGesture()
-                    .onChanged { value in
-                        let newOffset = value.translation.height
-                        dragOffset = min(max(newOffset, -(menuHeight + geometry.safeAreaInsets.top)), 0)
-                    }
-                    .onEnded { value in
-                        let velocity = value.predictedEndTranslation.height - value.translation.height
-                        withAnimation(.spring()) {
-                            if velocity > 100 || dragOffset > -(menuHeight + geometry.safeAreaInsets.top)/2 {
-                                isMenuVisible = true
-                                dragOffset = 0
-                            } else {
-                                isMenuVisible = false
-                                dragOffset = 0
-                            }
-                        }
-                    }
-            )
-            .animation(.spring(), value: isMenuVisible)
-            .accessibilityElement(children: .contain)
-            .accessibilityLabel("Menu")
-            .accessibilityHint("Swipe down to open menu. Swipe up to close.")
-            .accessibilityAddTraits(isMenuVisible ? .isSelected : [])
+            .cornerRadius(16, corners: [.topLeft, .topRight])
+            .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: -2)
+        }
+        .edgesIgnoringSafeArea(.bottom)
+    }
+    
+    private func getIcon(for index: Int) -> String {
+        switch index {
+        case 0:
+            return "map"
+        case 1:
+            return "person.circle"
+        case 2:
+            return "person.2"
+        case 3:
+            return "gear"
+        default:
+            return "questionmark"
+        }
+    }
+    
+    private func getTitle(for index: Int) -> String {
+        switch index {
+        case 0:
+            return "Map"
+        case 1:
+            return "Profile"
+        case 2:
+            return "Friends"
+        case 3:
+            return "Settings"
+        default:
+            return "Unknown"
         }
     }
 }
 
-struct MenuButton: View {
+struct TabButton: View {
     let icon: String
     let title: String
+    let isSelected: Bool
+    let action: () -> Void
     
     var body: some View {
-        Button(action: {
-            // Handle button tap
-        }) {
-            HStack(spacing: 12) {
+        Button(action: action) {
+            VStack(spacing: 4) {
                 Image(systemName: icon)
-                    .font(.title3)
-                    .accessibility(hidden: true)
+                    .font(.system(size: 24))
+                    .foregroundColor(isSelected ? .blue : .gray)
+                
                 Text(title)
-                    .font(.body)
-                Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.subheadline)
-                    .foregroundColor(.gray)
-                    .accessibility(hidden: true)
+                    .font(.system(size: 12))
+                    .foregroundColor(isSelected ? .blue : .gray)
             }
-            .foregroundColor(.primary)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 4)
+            .padding(.vertical, 8)
+            .frame(maxWidth: .infinity)
         }
-        .accessibilityHint("Opens \(title.lowercased()) screen")
     }
 }
-//
-//// Extension to create custom corner radius
-//extension View {
-//    func cornerRadius(_ radius: CGFloat, corners: UIRectCorner) -> some View {
-//        clipShape(RoundedCorner(radius: radius, corners: corners))
-//    }
-//    
-//    func only(topLeft: Bool = false, topRight: Bool = false, bottomLeft: Bool = false, bottomRight: Bool = false) -> some View {
-//        var corners: UIRectCorner = []
-//        if topLeft { corners.insert(.topLeft) }
-//        if topRight { corners.insert(.topRight) }
-//        if bottomLeft { corners.insert(.bottomLeft) }
-//        if bottomRight { corners.insert(.bottomRight) }
-//        return cornerRadius(20, corners: corners)
-//    }
-//}
-//
-//struct RoundedCorner: Shape {
-//    var radius: CGFloat = .infinity
-//    var corners: UIRectCorner = .allCorners
-//    
-//    func path(in rect: CGRect) -> Path {
-//        let path = UIBezierPath(
-//            roundedRect: rect,
-//            byRoundingCorners: corners,
-//            cornerRadii: CGSize(width: radius, height: radius)
-//        )
-//        return Path(path.cgPath)
-//    }
-//}
+
+// Extension to create custom corner radius
+extension View {
+    func cornerRadius(_ radius: CGFloat, corners: UIRectCorner) -> some View {
+        clipShape(RoundedCorner(radius: radius, corners: corners))
+    }
+}
+
+struct RoundedCorner: Shape {
+    var radius: CGFloat = .infinity
+    var corners: UIRectCorner = .allCorners
+    
+    func path(in rect: CGRect) -> Path {
+        let path = UIBezierPath(
+            roundedRect: rect,
+            byRoundingCorners: corners,
+            cornerRadii: CGSize(width: radius, height: radius)
+        )
+        return Path(path.cgPath)
+    }
+}
 
 #Preview {
     MenuView()
