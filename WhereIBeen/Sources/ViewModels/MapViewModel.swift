@@ -6,6 +6,7 @@ import CoreLocation
 class MapViewModel: ObservableObject {
     // Published properties that the View can observe
     @Published var mapArea = MapArea()
+    @Published var totalMiles: Double = 0
     
     // Error publishers
     private let locationErrorSubject = PassthroughSubject<LocationServiceError, Never>()
@@ -31,6 +32,7 @@ class MapViewModel: ObservableObject {
     private var locationUpdateSubscription: AnyCancellable?
     private var errorSubscription: AnyCancellable?
     private var locationSubscription: AnyCancellable?
+    private var lastLocation: CLLocation?
     
     // Computed properties
     var region: MKCoordinateRegion {
@@ -46,11 +48,6 @@ class MapViewModel: ObservableObject {
     var erasedRegions: [ErasedRegion] {
         get { mapArea.erasedRegions }
         set { mapArea.erasedRegions = newValue }
-    }
-    
-    var percentExplored: Double {
-        get { mapArea.percentExplored }
-        set { mapArea.percentExplored = newValue }
     }
     
     var isFollowingUser: Bool {
@@ -170,11 +167,7 @@ class MapViewModel: ObservableObject {
         var limitedRegion = newRegion
         
         // Set even stricter limits for very extreme zoom levels
-        // let minZoomDelta = MapArea.minZoomDelta // Keep the minimum (most zoomed in) limit as is
         let maxZoomDelta = 75.0 // Lower the maximum (most zoomed out) limit
-        
-        // limitedRegion.span.latitudeDelta = min(max(newRegion.span.latitudeDelta, minZoomDelta), maxZoomDelta)
-        // limitedRegion.span.longitudeDelta = min(max(newRegion.span.longitudeDelta, minZoomDelta), maxZoomDelta)
         
         // Only enforce maximum zoom out limit
         limitedRegion.span.latitudeDelta = min(newRegion.span.latitudeDelta, maxZoomDelta)
@@ -184,14 +177,8 @@ class MapViewModel: ObservableObject {
         if limitedRegion.span.latitudeDelta != newRegion.span.latitudeDelta || 
            limitedRegion.span.longitudeDelta != newRegion.span.longitudeDelta {
             region = limitedRegion
-            
-            // If we had to correct the zoom due to limits, add a small delay to prevent freezing
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
-                self?.updateExploredPercentage()
-            }
         } else {
             region = newRegion
-            updateExploredPercentage()
         }
     }
     
@@ -200,6 +187,14 @@ class MapViewModel: ObservableObject {
     private func handleLocationUpdate(_ location: CLLocation) {
         let coordinate = location.coordinate
         userLocation = coordinate
+        
+        // Calculate distance traveled if we have a previous location
+        if let lastLoc = lastLocation {
+            let distanceInMeters = location.distance(from: lastLoc)
+            let distanceInMiles = distanceInMeters / 1609.34 // Convert meters to miles
+            totalMiles += distanceInMiles
+        }
+        lastLocation = location
         
         // Auto-center on user if following is enabled
         if isFollowingUser {
@@ -227,23 +222,23 @@ class MapViewModel: ObservableObject {
     /// Add a new erased region at the specified coordinate
     /// - Parameters:
     ///   - coordinate: The center coordinate of the region to erase
-    ///   - radius: The radius of the region in miles
+    ///   - radius: The radius of the region in miles (ignored, always uses 0.25 miles)
     private func addErasedRegion(at coordinate: CLLocationCoordinate2D, withRadius radius: Double) {
+        let fixedRadius = 0.25 // Always use 0.25 miles
         let newRegion = ErasedRegion(
             center: coordinate,
-            radiusMiles: radius
+            radiusMiles: fixedRadius
         )
         
         // Only add if we don't already have a very similar region
         // This helps prevent too many overlapping regions
         let isNearlySame = erasedRegions.contains { existingRegion in
             let distance = calculateDistance(from: existingRegion.center, to: coordinate)
-            return distance < (radius * 1609.34 * 0.5) // If within half the radius
+            return distance < (fixedRadius * 1609.34 * 0.5) // If within half the radius
         }
         
         if !isNearlySame {
             erasedRegions.append(newRegion)
-            updateExploredPercentage()
         }
     }
     
@@ -262,8 +257,9 @@ class MapViewModel: ObservableObject {
     func resetMap() {
         erasedRegions = []
         exploredArea = []
-        percentExplored = 0
+        totalMiles = 0
         region = MapArea.defaultRegion
+        lastLocation = nil
         
         // Don't stop location tracking after reset
         if let location = userLocation {
@@ -274,49 +270,6 @@ class MapViewModel: ObservableObject {
     /// Create a fog overlay for the map
     /// - Returns: A polygon representing the fog overlay
     func createFogOverlay() -> MKPolygon {
-        // If very zoomed out, return a simplified overlay
-        if region.span.latitudeDelta > 70 {
-            return createSimplifiedFogOverlay()
-        }
-        // If very zoomed in, use square grid
-        else if region.span.latitudeDelta < 0.1 {
-            return createSquareGridOverlay()
-        }
-        
-        return mapOverlayService.createFogOverlay(region: region, erasedRegions: erasedRegions)
-    }
-    
-    /// Create a simplified fog overlay for extreme zoom levels
-    /// - Returns: A simplified polygon with minimal detail
-    private func createSimplifiedFogOverlay() -> MKPolygon {
-        // Create a simple rectangle for the fog with no holes
-        let padding = min(region.span.latitudeDelta, 10.0) * 0.5
-        
-        let bounds = [
-            CLLocationCoordinate2D(
-                latitude: region.center.latitude - region.span.latitudeDelta/2 - padding,
-                longitude: region.center.longitude - region.span.longitudeDelta/2 - padding
-            ),
-            CLLocationCoordinate2D(
-                latitude: region.center.latitude - region.span.latitudeDelta/2 - padding,
-                longitude: region.center.longitude + region.span.longitudeDelta/2 + padding
-            ),
-            CLLocationCoordinate2D(
-                latitude: region.center.latitude + region.span.latitudeDelta/2 + padding,
-                longitude: region.center.longitude + region.span.longitudeDelta/2 + padding
-            ),
-            CLLocationCoordinate2D(
-                latitude: region.center.latitude + region.span.latitudeDelta/2 + padding,
-                longitude: region.center.longitude - region.span.longitudeDelta/2 - padding
-            )
-        ]
-        
-        return MKPolygon(coordinates: bounds, count: bounds.count)
-    }
-    
-    /// Create a grid-based overlay for very zoomed in views
-    /// - Returns: A polygon with square holes for explored areas
-    private func createSquareGridOverlay() -> MKPolygon {
         // Create the outer bounds with some padding
         let padding = min(region.span.latitudeDelta, 1.0) * 0.5
         
@@ -397,11 +350,5 @@ class MapViewModel: ObservableObject {
                coordinate.latitude <= maxLat &&
                coordinate.longitude >= minLon &&
                coordinate.longitude <= maxLon
-    }
-    
-    /// Update the percentage of the world that has been explored
-    private func updateExploredPercentage() {
-        let totalErasedArea = mapArea.calculateErasedArea()
-        percentExplored = mapOverlayService.calculateExploredPercentage(erasedArea: totalErasedArea)
     }
 } 

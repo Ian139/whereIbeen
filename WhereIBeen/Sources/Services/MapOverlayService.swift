@@ -12,30 +12,6 @@ class MapOverlayService {
         return FogOverlay(region: region, erasedRegions: erasedRegions)
     }
     
-    /// Calculates the percentage of the world that has been explored
-    /// - Parameters:
-    ///   - erasedArea: Total area that has been erased/explored in square kilometers
-    /// - Returns: Percentage of world explored (0-100)
-    func calculateExploredPercentage(erasedArea: Double) -> Double {
-        return min((erasedArea / MapArea.earthSurfaceArea) * 100, 100)
-    }
-    
-    /// Calculates the percentage of the world that is visible in the current map view
-    /// - Parameter region: The current map region
-    /// - Returns: Percentage of world that is visible (0-100)
-    func calculateVisiblePercentage(region: MKCoordinateRegion) -> Double {
-        let latDegrees = region.span.latitudeDelta
-        let lngDegrees = region.span.longitudeDelta
-        let centerLat = region.center.latitude
-        
-        // Convert degrees to kilometers
-        let degreesToKm = 111.32
-        let correction = cos(centerLat * .pi / 180)
-        let visibleAreaKm = latDegrees * lngDegrees * degreesToKm * degreesToKm * correction
-        
-        return min((visibleAreaKm / MapArea.earthSurfaceArea) * 100, 100)
-    }
-    
     /// Convert a screen point to a coordinate on the map
     /// - Parameters:
     ///   - point: The screen point (CGPoint)
@@ -86,14 +62,12 @@ class FogOverlay: MKPolygon {
         // Limit the number of regions to process
         let regionsToProcess = Array(visibleRegions.prefix(FogOverlay.maxRegionsToProcess))
         
-        // Adjust point count based on zoom level to prevent performance issues
-        let zoom = Double(region.span.latitudeDelta)
-        
         // Create interior polygons for each erased region (circle approximation)
         var interiorPolygons: [MKPolygon] = []
         
         for erasedRegion in regionsToProcess {
             // Determine appropriate number of points based on zoom level
+            let zoom = Double(region.span.latitudeDelta)
             let pointCount = FogOverlay.determinePointCount(for: zoom, radiusMiles: erasedRegion.radiusMiles)
             
             // Create a circular polygon by approximating with points
@@ -115,7 +89,7 @@ class FogOverlay: MKPolygon {
         }
     }
     
-    /// Determine if a coordinate is within or near the visible area
+    /// Check if a coordinate is within or near the visible area
     private static func isCoordinateInVisibleArea(coordinate: CLLocationCoordinate2D, visibleArea: [CLLocationCoordinate2D], buffer: Double) -> Bool {
         guard visibleArea.count >= 4 else { return true } // Safety check
         
@@ -160,41 +134,41 @@ class FogOverlay: MKPolygon {
     /// Create points that approximate a circle for the given center and radius
     private static func createCirclePoints(center: CLLocationCoordinate2D, radiusMiles: Double, numPoints: Int) -> [CLLocationCoordinate2D] {
         var points: [CLLocationCoordinate2D] = []
-        
-        // Convert miles to meters
-        let radiusMeters = radiusMiles * 1609.34
+        let radiusMeters = radiusMiles * 1609.34 // Convert miles to meters
         
         for i in 0..<numPoints {
-            let angle = Double(i) * (2.0 * Double.pi / Double(numPoints))
-            let pointCoordinate = calculateCoordinate(center: center, radiusMeters: radiusMeters, bearing: angle)
-            points.append(pointCoordinate)
+            let angle = (Double(i) / Double(numPoints)) * 2.0 * .pi
+            let dx = radiusMeters * cos(angle)
+            let dy = radiusMeters * sin(angle)
+            
+            let point = calculateCoordinate(from: center, xMeters: dx, yMeters: dy)
+            points.append(point)
         }
         
         return points
     }
     
-    /// Calculate a coordinate at a given distance and bearing from a center point
-    private static func calculateCoordinate(center: CLLocationCoordinate2D, radiusMeters: Double, bearing: Double) -> CLLocationCoordinate2D {
-        let earthRadiusMeters = 6371000.0
+    /// Calculate a new coordinate given a starting point and x/y offsets in meters
+    private static func calculateCoordinate(from coordinate: CLLocationCoordinate2D, xMeters: Double, yMeters: Double) -> CLLocationCoordinate2D {
+        // Earth's radius in meters
+        let earthRadius = 6371000.0
         
-        let latRad = center.latitude * Double.pi / 180
-        let lngRad = center.longitude * Double.pi / 180
-        let angularDistance = radiusMeters / earthRadiusMeters
-        let trueBearing = bearing
+        // Convert latitude and longitude to radians
+        let lat = coordinate.latitude * .pi / 180
+        let lon = coordinate.longitude * .pi / 180
         
-        let newLatRad = asin(sin(latRad) * cos(angularDistance) + cos(latRad) * sin(angularDistance) * cos(trueBearing))
+        // Calculate new latitude
+        let newLat = asin(sin(lat) * cos(yMeters/earthRadius) +
+                         cos(lat) * sin(yMeters/earthRadius) * cos(0))
         
-        var newLngRad = lngRad + atan2(
-            sin(trueBearing) * sin(angularDistance) * cos(latRad),
-            cos(angularDistance) - sin(latRad) * sin(newLatRad)
+        // Calculate new longitude
+        let newLon = lon + atan2(sin(xMeters/earthRadius) * cos(lat),
+                                cos(yMeters/earthRadius) - sin(lat) * sin(newLat))
+        
+        // Convert back to degrees
+        return CLLocationCoordinate2D(
+            latitude: newLat * 180 / .pi,
+            longitude: newLon * 180 / .pi
         )
-        
-        // Normalize longitude to -180 to +180
-        newLngRad = fmod((newLngRad + 3 * Double.pi), (2 * Double.pi)) - Double.pi
-        
-        let newLat = newLatRad * 180 / Double.pi
-        let newLng = newLngRad * 180 / Double.pi
-        
-        return CLLocationCoordinate2D(latitude: newLat, longitude: newLng)
     }
 } 

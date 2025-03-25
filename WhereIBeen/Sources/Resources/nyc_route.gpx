@@ -1,0 +1,92 @@
+<?xml version="1.0"?>
+<gpx version="1.1" creator="WhereIBeen">
+    <!-- Starting at Central Park South -->
+    <wpt lat="40.7650" lon="-73.9750">
+        <name>Central Park South - Start</name>
+        <time>2024-03-25T10:00:00Z</time>
+    </wpt>
+    
+    <!-- First square - moving east -->
+    <wpt lat="40.7650" lon="-73.9705">
+        <name>Square 1 East</name>
+        <time>2024-03-25T10:01:00Z</time>
+    </wpt>
+    
+    <!-- Moving south one square -->
+    <wpt lat="40.7615" lon="-73.9705">
+        <name>Square 2 South</name>
+        <time>2024-03-25T10:02:00Z</time>
+    </wpt>
+    
+    <!-- Moving west one square -->
+    <wpt lat="40.7615" lon="-73.9750">
+        <name>Square 2 West</name>
+        <time>2024-03-25T10:03:00Z</time>
+    </wpt>
+    
+    <!-- Moving south again -->
+    <wpt lat="40.7580" lon="-73.9750">
+        <name>Square 3 South</name>
+        <time>2024-03-25T10:04:00Z</time>
+    </wpt>
+    
+    <!-- Moving east -->
+    <wpt lat="40.7580" lon="-73.9705">
+        <name>Square 3 East</name>
+        <time>2024-03-25T10:05:00Z</time>
+    </wpt>
+    
+    <!-- Moving south -->
+    <wpt lat="40.7545" lon="-73.9705">
+        <name>Square 4 South</name>
+        <time>2024-03-25T10:06:00Z</time>
+    </wpt>
+    
+    <!-- Moving west -->
+    <wpt lat="40.7545" lon="-73.9750">
+        <name>Square 4 West</name>
+        <time>2024-03-25T10:07:00Z</time>
+    </wpt>
+    
+    <!-- Moving southwest (diagonal square) -->
+    <wpt lat="40.7510" lon="-73.9795">
+        <name>Square 5 Southwest</name>
+        <time>2024-03-25T10:08:00Z</time>
+    </wpt>
+    
+    <!-- Moving west -->
+    <wpt lat="40.7510" lon="-73.9840">
+        <name>Square 5 West</name>
+        <time>2024-03-25T10:09:00Z</time>
+    </wpt>
+    
+    <!-- Moving south -->
+    <wpt lat="40.7475" lon="-73.9840">
+        <name>Square 6 South</name>
+        <time>2024-03-25T10:10:00Z</time>
+    </wpt>
+    
+    <!-- Moving southwest -->
+    <wpt lat="40.7440" lon="-73.9885">
+        <name>Square 7 Southwest</name>
+        <time>2024-03-25T10:11:00Z</time>
+    </wpt>
+    
+    <!-- Moving south -->
+    <wpt lat="40.7405" lon="-73.9885">
+        <name>Square 8 South</name>
+        <time>2024-03-25T10:12:00Z</time>
+    </wpt>
+    
+    <!-- Moving west -->
+    <wpt lat="40.7405" lon="-73.9930">
+        <name>Square 8 West</name>
+        <time>2024-03-25T10:13:00Z</time>
+    </wpt>
+    
+    <!-- Moving south -->
+    <wpt lat="40.7370" lon="-73.9930">
+        <name>Square 9 South</name>
+        <time>2024-03-25T10:14:00Z</time>
+    </wpt>
+</gpx> 

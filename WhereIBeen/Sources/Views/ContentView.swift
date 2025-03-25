@@ -1,6 +1,53 @@
 import SwiftUI
 import MapKit
 
+/// View showing the user's current level based on miles explored
+struct LevelView: View {
+    let level: Int
+    let milesExplored: Double
+    
+    // Calculate progress to next level
+    private var progressToNextLevel: Double {
+        let progressInCurrentLevel = milesExplored.truncatingRemainder(dividingBy: 100.0)
+        return progressInCurrentLevel / 100.0
+    }
+    
+    var body: some View {
+        HStack(spacing: 4) {
+            // Level indicator with progress circle
+            ZStack {
+                // Circular background with progress
+                Circle()
+                    .stroke(Color.gray.opacity(0.3), lineWidth: 3)
+                    .frame(width: 44, height: 44)
+                
+                // Progress arc
+                Circle()
+                    .trim(from: 0, to: CGFloat(progressToNextLevel))
+                    .stroke(Color.blue, style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                    .frame(width: 44, height: 44)
+                    .rotationEffect(.degrees(-90))
+                
+                // Level number
+                Text("\(level)")
+                    .foregroundColor(.white)
+                    .font(.system(size: 18, weight: .bold))
+            }
+            
+            // Miles text
+            Text(String(format: "%.1f mi", milesExplored))
+                .foregroundColor(.white)
+                .font(.system(size: 16, weight: .medium))
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(Color.black.opacity(0.7))
+        .cornerRadius(25)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Level \(level), \(String(format: "%.1f", milesExplored)) miles explored")
+    }
+}
+
 struct ContentView: View {
     @StateObject private var viewModel = MapViewModel()
     @State private var showLocationErrorAlert = false
@@ -21,18 +68,22 @@ struct ContentView: View {
             VStack {
                 Spacer()
                 
-                // Bottom controls moved up with additional bottom padding
+                // Bottom controls moved to right side and up
                 HStack {
-                    // Percentage View
-                    ExplorationPercentageView(percentage: viewModel.percentExplored)
+                    Spacer() // This pushes the controls to the right
                     
-                    Spacer()
-                    
-                    // Compass button to center on user's location
-                    CompassButton(action: viewModel.centerOnUser)
+                    VStack(spacing: 8) {
+                        // Level View
+                        LevelView(level: Int(viewModel.totalMiles / 100) + 1, 
+                                milesExplored: viewModel.totalMiles)
+                        
+                        // Compass button to center on user's location
+                        CompassButton(action: viewModel.centerOnUser)
+                    }
+                    .padding()
+                    .padding(.bottom, 100) // Increased bottom padding to move controls up more
+                    .padding(.trailing, 16) // Add some padding from the right edge
                 }
-                .padding()
-                .padding(.bottom, 50) // Add extra padding to move controls up above the tab bar
             }
             
             // Error overlay for persistent errors
@@ -211,34 +262,20 @@ struct MapContainer: UIViewRepresentable {
     }
 }
 
-/// View showing the percentage of the world explored
-struct ExplorationPercentageView: View {
-    let percentage: Double
-    
-    var body: some View {
-        Text(String(format: "%.4f%%", percentage))
-            .foregroundColor(.white)
-            .padding()
-            .background(Color.black.opacity(0.7))
-            .cornerRadius(8)
-    }
-}
-
-/// Compass button that centers the map on the user's location
+/// Button that centers the map on the user's location
 struct CompassButton: View {
     let action: () -> Void
     
     var body: some View {
         Button(action: action) {
-            Image(systemName: "location.north.fill")
-                .foregroundColor(.white)
+            Image(systemName: "location.fill")
                 .font(.system(size: 22))
-                .padding(12)
-                .background(Color.blue.opacity(0.8))
+                .foregroundColor(.white)
+                .frame(width: 44, height: 44)
+                .background(Color.black.opacity(0.7))
                 .clipShape(Circle())
-                .shadow(radius: 2)
         }
-        .accessibilityLabel("Center on your location")
+        .accessibilityLabel("Center on current location")
     }
 }
 

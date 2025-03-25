@@ -1,0 +1,62 @@
+<?xml version="1.0"?>
+<gpx version="1.1" creator="WhereIBeen">
+    <!-- Starting at Central Park South -->
+    <wpt lat="40.7650" lon="-73.9750">
+        <name>Central Park South</name>
+        <time>2024-03-25T10:00:00Z</time>
+    </wpt>
+    
+    <!-- Moving down 5th Avenue -->
+    <wpt lat="40.7625" lon="-73.9735">
+        <name>5th Avenue</name>
+        <time>2024-03-25T10:01:00Z</time>
+    </wpt>
+    
+    <!-- Near Empire State Building -->
+    <wpt lat="40.7580" lon="-73.9725">
+        <name>Empire State Area</name>
+        <time>2024-03-25T10:02:00Z</time>
+    </wpt>
+    
+    <!-- Flatiron District -->
+    <wpt lat="40.7410" lon="-73.9895">
+        <name>Flatiron</name>
+        <time>2024-03-25T10:03:00Z</time>
+    </wpt>
+    
+    <!-- Union Square -->
+    <wpt lat="40.7360" lon="-73.9905">
+        <name>Union Square</name>
+        <time>2024-03-25T10:04:00Z</time>
+    </wpt>
+    
+    <!-- Washington Square Park -->
+    <wpt lat="40.7310" lon="-73.9970">
+        <name>Washington Square</name>
+        <time>2024-03-25T10:05:00Z</time>
+    </wpt>
+    
+    <!-- SoHo -->
+    <wpt lat="40.7240" lon="-74.0015">
+        <name>SoHo</name>
+        <time>2024-03-25T10:06:00Z</time>
+    </wpt>
+    
+    <!-- Tribeca -->
+    <wpt lat="40.7165" lon="-74.0090">
+        <name>Tribeca</name>
+        <time>2024-03-25T10:07:00Z</time>
+    </wpt>
+    
+    <!-- World Trade Center -->
+    <wpt lat="40.7120" lon="-74.0120">
+        <name>World Trade Center</name>
+        <time>2024-03-25T10:08:00Z</time>
+    </wpt>
+    
+    <!-- Wall Street -->
+    <wpt lat="40.7060" lon="-74.0090">
+        <name>Wall Street</name>
+        <time>2024-03-25T10:09:00Z</time>
+    </wpt>
+</gpx>

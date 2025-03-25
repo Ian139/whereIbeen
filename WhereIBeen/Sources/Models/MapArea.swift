@@ -51,20 +51,15 @@ struct MapArea {
     /// User's current location
     var userLocation: CLLocationCoordinate2D? = nil
     
-    /// Percentage of the world explored (0-100)
-    var percentExplored: Double = 0
-    
     /// Flag to determine if the map should follow the user
     var isFollowingUser: Bool = true
     
     /// Constants
-    static let earthSurfaceArea: Double = 510100000 // km²
     static let minZoomDelta: Double = 0.05 // Smaller zoom delta for closer exploration
     static let maxZoomDelta: Double = 100
     static let autoEraserRadiusMiles: Double = 0.25 // Radius for auto-clearing based on user location
     static let autoErasingInterval: TimeInterval = 5 // Seconds between location-based erasings
     
-    /// Default starting region
     static let defaultRegion = MKCoordinateRegion(
         center: CLLocationCoordinate2D(latitude: 34.0522, longitude: -118.2437),
         span: MKCoordinateSpan(latitudeDelta: 0.0922, longitudeDelta: 0.0421)

@@ -19,6 +19,7 @@
 
 /* Begin PBXFileReference section */
 		8A1234567890ABC0 /* WhereIBeen.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = WhereIBeen.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		AA23DB1B2D92A5EF00C64E38 /* nyc_route.gpx */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = nyc_route.gpx; sourceTree = "<group>"; };
 		AA937E952D900BBF0000D5E7 /* MapArea.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapArea.swift; sourceTree = "<group>"; };
 		AA937E972D900BBF0000D5E7 /* MapOverlayService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapOverlayService.swift; sourceTree = "<group>"; };
 		AA937E992D900BBF0000D5E7 /* MapViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapViewModel.swift; sourceTree = "<group>"; };
@@ -43,6 +44,7 @@
 		8A1234567890ABD1 = {
 			isa = PBXGroup;
 			children = (
+				AA23DB1B2D92A5EF00C64E38 /* nyc_route.gpx */,
 				AA937E962D900BBF0000D5E7 /* Models */,
 				AA937E982D900BBF0000D5E7 /* Services */,
 				AA937E9A2D900BBF0000D5E7 /* ViewModels */,
