@@ -5,7 +5,7 @@
 /Users/main/Desktop/Personal/Active/whereIbeen/WhereIBeen.xcodeproj/project.xcworkspace/xcuserdata/main.xcuserdatad/UserInterfaceState.xcuserstate
 /Users/main/desktop/personal/active/whereibeen/WhereIBeen.xcodeproj
 ~/Desktop/Personal/Active/whereIbeen/WhereIBeen.xcodeproj/project.xcworkspace/xcuserdata/main.xcuserdatad/UserInterfaceState.xcuserstate
-
+WhereIBeen.xcodeproj/
 # Xcode
 #
 # gitignore contributors: remember to update Global/Xcode.gitignore, Objective-C.gitignore & Swift.gitignore
@@ -88,3 +88,19 @@ iOSInjectionProject/
 ehthumbs.db
 Thumbs.db
 node_modules
+# Xcode
+*.xcodeproj/
+*.xcworkspace/
+xcuserdata/
+.DS_Store
+build/
+DerivedData/
+*.pbxuser
+!default.pbxuser
+*.mode1v3
+!default.mode1v3
+*.mode2v3
+!default.mode2v3
+*.perspectivev3
+!default.perspectivev3
+*.xcuserstate
