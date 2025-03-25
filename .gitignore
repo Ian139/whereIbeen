@@ -42,6 +42,7 @@ DerivedData/
 ## Playgrounds
 timeline.xctimeline
 playground.xcworkspace
+/Users/main/desktop/personal/active/whereibeen/WhereIBeen.xcodeproj/project.xcworkspace/xcuserdata/main.xcuserdatad/UserInterfaceState.xcuserstate
 
 # Swift Package Manager
 .build/
