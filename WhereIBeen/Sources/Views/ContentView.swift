@@ -1,5 +1,6 @@
 import SwiftUI
 import MapKit
+import UIKit
 
 /// View showing the user's current level based on miles explored
 struct LevelView: View {
@@ -113,17 +114,34 @@ struct ContentView: View {
                         .padding(.horizontal)
                         .padding(.bottom, 8)
                     
-                    Button(action: {
-                        viewModel.retryLocationServices()
-                        // Don't dismiss the view yet until we get a successful location
-                    }) {
-                        Text("Retry")
-                            .fontWeight(.medium)
-                            .padding(.horizontal, 24)
-                            .padding(.vertical, 8)
-                            .background(Color.blue)
-                            .foregroundColor(.white)
-                            .cornerRadius(8)
+                    HStack(spacing: 16) {
+                        Button(action: {
+                            viewModel.retryLocationServices()
+                            // Don't dismiss the view yet until we get a successful location
+                        }) {
+                            Text("Retry")
+                                .fontWeight(.medium)
+                                .padding(.horizontal, 24)
+                                .padding(.vertical, 8)
+                                .background(Color.blue)
+                                .foregroundColor(.white)
+                                .cornerRadius(8)
+                        }
+                        
+                        Button(action: {
+                            // Open app settings
+                            if let settingsURL = URL(string: UIApplication.openSettingsURLString) {
+                                UIApplication.shared.open(settingsURL)
+                            }
+                        }) {
+                            Text("Settings")
+                                .fontWeight(.medium)
+                                .padding(.horizontal, 24)
+                                .padding(.vertical, 8)
+                                .background(Color.gray)
+                                .foregroundColor(.white)
+                                .cornerRadius(8)
+                        }
                     }
                 }
                 .padding()

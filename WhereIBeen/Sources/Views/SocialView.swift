@@ -3,7 +3,7 @@ import MapKit
 
 struct SocialView: View {
     @State private var posts = SocialPost.samplePosts()
-    @State private var selectedPost: SocialPost?
+    @State private var selectedPostId: UUID? // Store just the ID instead of the post reference
     @StateObject private var storageService = LocalStorageService()
     @State private var showingSaveExplorationSheet = false
     @State private var showingTripDetail = false
@@ -11,6 +11,25 @@ struct SocialView: View {
     
     // Need access to the MapViewModel to get current exploration data
     @EnvironmentObject var mapViewModel: MapViewModel
+    
+    // Computed property to get the selected post
+    private var selectedPost: Binding<SocialPost?> {
+        Binding<SocialPost?>(
+            get: {
+                if let id = selectedPostId {
+                    return posts.first(where: { $0.id == id })
+                }
+                return nil
+            },
+            set: { newValue in
+                if let post = newValue {
+                    selectedPostId = post.id
+                } else {
+                    selectedPostId = nil
+                }
+            }
+        )
+    }
     
     // Grid layout configuration
     private let columns = [
@@ -57,7 +76,7 @@ struct SocialView: View {
                         ForEach(posts) { post in
                             TripPostCard(post: post)
                                 .onTapGesture {
-                                    selectedPost = post
+                                    selectedPostId = post.id
                                 }
                         }
                     }
@@ -81,8 +100,10 @@ struct SocialView: View {
                     mapRegion: mapViewModel.region
                 )
             }
-            .sheet(item: $selectedPost) { post in
-                TripPostDetail(post: post)
+            .sheet(item: selectedPost) { post in
+                TripPostDetail(post: post, onCommentAdded: { postId, commentText in
+                    addCommentToPost(postId: postId, text: commentText)
+                })
             }
             .sheet(isPresented: $showingTripDetail, onDismiss: {
                 storageService.loadTrips() // Refresh trips when dismissing
@@ -94,6 +115,13 @@ struct SocialView: View {
             .onAppear {
                 storageService.loadTrips()
             }
+        }
+    }
+    
+    // Function to add a comment to a post
+    private func addCommentToPost(postId: UUID, text: String) {
+        if let index = posts.firstIndex(where: { $0.id == postId }) {
+            posts[index].addComment(text: text)
         }
     }
 }
@@ -329,7 +357,7 @@ struct TripPostCard: View {
                 HStack {
                     Spacer()
                     
-                    Label("\(post.comments) comments", systemImage: "bubble.right")
+                    Label("\(post.commentCount) comments", systemImage: "bubble.right")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
@@ -430,114 +458,261 @@ struct EnhancedFogOverlay: View {
 
 struct TripPostDetail: View {
     let post: SocialPost
+    let onCommentAdded: (UUID, String) -> Void
+    
     @Environment(\.dismiss) private var dismiss
     @State private var comment = ""
+    @State private var showingLikeAnimation = false
+    @State private var scrollProxy: ScrollViewProxy? = nil
+    @State private var lastCommentId: UUID? = nil
     
     var body: some View {
         NavigationView {
             ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    // Enhanced full-size map with fog overlay
-                    ZStack(alignment: .bottomTrailing) {
-                        MapPreview(region: post.mapRegion, exploredCoordinates: post.exploredCoordinates)
-                            .frame(height: 300)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .strokeBorder(Color.gray.opacity(0.3), lineWidth: 1)
-                            )
-                        
-                        // Social stats badge
-                        HStack(spacing: 10) {
-                            Label("\(post.likes)", systemImage: "heart.fill")
-                                .font(.caption)
-                                .fontWeight(.medium)
-                                .foregroundColor(.white)
-                        }
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .background(Color.red.opacity(0.8))
-                        .foregroundColor(.white)
-                        .clipShape(Capsule())
-                        .padding(12)
-                    }
-                    
+                ScrollViewReader { proxy in
                     VStack(alignment: .leading, spacing: 16) {
-                        // Post header with profile info
-                        HStack(spacing: 12) {
-                            Image(systemName: post.profileImage)
-                                .font(.title2)
-                                .foregroundColor(.blue)
-                                .frame(width: 40, height: 40)
-                                .background(Color(UIColor.tertiarySystemBackground))
-                                .clipShape(Circle())
+                        // Enhanced full-size map with fog overlay
+                        ZStack(alignment: .bottomTrailing) {
+                            MapPreview(region: post.mapRegion, exploredCoordinates: post.exploredCoordinates)
+                                .frame(height: 300)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .strokeBorder(Color.gray.opacity(0.3), lineWidth: 1)
+                                )
                             
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(post.username)
-                                    .font(.headline)
+                            // Social stats badge
+                            HStack(spacing: 10) {
+                                Button(action: {
+                                    // Animate like button
+                                    withAnimation {
+                                        showingLikeAnimation = true
+                                    }
+                                    
+                                    // Reset animation after delay
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                                        showingLikeAnimation = false
+                                    }
+                                }) {
+                                    Label("\(post.likes)", systemImage: "heart.fill")
+                                        .font(.caption)
+                                        .fontWeight(.medium)
+                                        .foregroundColor(.white)
+                                        .scaleEffect(showingLikeAnimation ? 1.3 : 1.0)
+                                }
+                            }
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(Color.red.opacity(0.8))
+                            .foregroundColor(.white)
+                            .clipShape(Capsule())
+                            .padding(12)
+                        }
+                        
+                        VStack(alignment: .leading, spacing: 16) {
+                            // Post header with profile info
+                            HStack(spacing: 12) {
+                                Image(systemName: post.profileImage)
+                                    .font(.title2)
+                                    .foregroundColor(.blue)
+                                    .frame(width: 40, height: 40)
+                                    .background(Color(UIColor.tertiarySystemBackground))
+                                    .clipShape(Circle())
                                 
-                                Text(timeAgo(from: post.postedAt))
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(post.username)
+                                        .font(.headline)
+                                    
+                                    Text(timeAgo(from: post.postedAt))
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+                                
+                                Spacer()
+                                
+                                Label("\(post.commentCount)", systemImage: "bubble.right")
                                     .font(.caption)
+                                    .padding(6)
+                                    .background(Color(UIColor.tertiarySystemBackground))
+                                    .cornerRadius(8)
                                     .foregroundColor(.secondary)
                             }
                             
-                            Spacer()
+                            // Trip details
+                            Text(post.tripName)
+                                .font(.title2)
+                                .fontWeight(.bold)
                             
-                            Label("\(post.comments)", systemImage: "bubble.right")
-                                .font(.caption)
-                                .padding(6)
+                            Text(post.tripDescription)
+                                .font(.body)
+                                .padding(12)
                                 .background(Color(UIColor.tertiarySystemBackground))
                                 .cornerRadius(8)
-                                .foregroundColor(.secondary)
-                        }
-                        
-                        // Trip details
-                        Text(post.tripName)
-                            .font(.title2)
-                            .fontWeight(.bold)
-                        
-                        Text(post.tripDescription)
-                            .font(.body)
-                            .padding(12)
-                            .background(Color(UIColor.tertiarySystemBackground))
-                            .cornerRadius(8)
-                        
-                        Divider()
-                            .padding(.vertical, 4)
-                        
-                        // Comment input with enhanced styling
-                        VStack(spacing: 12) {
-                            Text("Add a comment")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
                             
+                            Divider()
+                                .padding(.vertical, 4)
+                            
+                            // Comment section title
                             HStack {
-                                TextField("Write something...", text: $comment)
-                                    .padding(10)
-                                    .background(Color(UIColor.tertiarySystemBackground))
-                                    .cornerRadius(8)
+                                Text("Comments")
+                                    .font(.headline)
                                 
-                                Button(action: {
-                                    // TODO: Handle comment posting
-                                    comment = ""
-                                }) {
-                                    Text("Post")
-                                        .fontWeight(.medium)
-                                        .padding(.horizontal, 12)
-                                        .padding(.vertical, 8)
-                                        .background(comment.isEmpty ? Color.blue.opacity(0.3) : Color.blue)
-                                        .foregroundColor(.white)
-                                        .cornerRadius(8)
+                                Spacer()
+                                
+                                Text("\(post.commentCount)")
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                                    .background(Color(UIColor.tertiarySystemBackground))
+                                    .cornerRadius(12)
+                            }
+                            .padding(.bottom, 8)
+                            
+                            // Comment list
+                            if post.comments.isEmpty {
+                                Text("Be the first to comment!")
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                                    .frame(maxWidth: .infinity, alignment: .center)
+                                    .padding(.vertical, 20)
+                            } else {
+                                ForEach(post.comments) { comment in
+                                    CommentView(comment: comment)
+                                        .id(comment.id)
+                                        .onAppear {
+                                            // Store scroll proxy when first comment appears
+                                            if scrollProxy == nil {
+                                                scrollProxy = proxy
+                                            }
+                                        }
                                 }
-                                .disabled(comment.isEmpty)
+                            }
+                            
+                            // Store reference to the last comment for scrolling
+                            if let lastId = post.comments.last?.id {
+                                Color.clear
+                                    .frame(height: 1)
+                                    .id("lastComment")
+                                    .onAppear {
+                                        lastCommentId = lastId
+                                    }
+                            }
+                            
+                            Divider()
+                                .padding(.vertical, 8)
+                            
+                            // Comment input with enhanced styling
+                            VStack(spacing: 12) {
+                                Text("Add a comment")
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                                
+                                HStack {
+                                    TextField("Write something...", text: $comment)
+                                        .padding(10)
+                                        .background(Color(UIColor.tertiarySystemBackground))
+                                        .cornerRadius(8)
+                                    
+                                    Button(action: {
+                                        // Add the comment and clear input
+                                        if !comment.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                                            onCommentAdded(post.id, comment)
+                                            comment = ""
+                                            
+                                            // Scroll to the new comment after it's added
+                                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                                                withAnimation {
+                                                    scrollProxy?.scrollTo("lastComment", anchor: .bottom)
+                                                }
+                                            }
+                                        }
+                                    }) {
+                                        Text("Post")
+                                            .fontWeight(.medium)
+                                            .padding(.horizontal, 12)
+                                            .padding(.vertical, 8)
+                                            .background(comment.isEmpty ? Color.blue.opacity(0.3) : Color.blue)
+                                            .foregroundColor(.white)
+                                            .cornerRadius(8)
+                                    }
+                                    .disabled(comment.isEmpty)
+                                }
                             }
                         }
+                        .padding()
                     }
-                    .padding()
                 }
             }
             .navigationBarItems(trailing: Button("Done") { dismiss() })
             .navigationBarTitleDisplayMode(.inline)
         }
+    }
+    
+    private func timeAgo(from date: Date) -> String {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .short
+        return formatter.localizedString(for: date, relativeTo: Date())
+    }
+}
+
+// New component for individual comment display
+struct CommentView: View {
+    let comment: Comment
+    @State private var showingLikeAnimation = false
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            // Comment header with profile info
+            HStack(spacing: 8) {
+                Image(systemName: comment.profileImage)
+                    .font(.subheadline)
+                    .foregroundColor(.blue)
+                    .frame(width: 28, height: 28)
+                    .background(Color(UIColor.tertiarySystemBackground))
+                    .clipShape(Circle())
+                
+                Text(comment.username)
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                
+                Spacer()
+                
+                Text(timeAgo(from: comment.postedAt))
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            }
+            
+            // Comment text
+            Text(comment.text)
+                .font(.body)
+                .padding(10)
+                .background(Color(UIColor.tertiarySystemBackground))
+                .cornerRadius(12)
+            
+            // Like button
+            HStack {
+                Spacer()
+                
+                Button(action: {
+                    // Animate like button
+                    withAnimation {
+                        showingLikeAnimation = true
+                    }
+                    
+                    // Reset animation after delay
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        showingLikeAnimation = false
+                    }
+                }) {
+                    Label("\(comment.likes)", systemImage: "heart")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .scaleEffect(showingLikeAnimation ? 1.2 : 1.0)
+                }
+                .buttonStyle(BorderlessButtonStyle())
+            }
+        }
+        .padding(.bottom, 12)
     }
     
     private func timeAgo(from date: Date) -> String {
