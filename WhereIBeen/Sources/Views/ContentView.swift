@@ -84,10 +84,8 @@ struct ContentView: View {
                     }
                 }
             } else if selectedTab == 1 {
-                // Social (previously Friends)
-                Text("Social View Coming Soon")
-                    .font(.title)
-                    .foregroundColor(.secondary)
+                // Social view
+                SocialView()
             } else if selectedTab == 2 {
                 // Profile - pass the shared viewModel
                 ProfileView(viewModel: viewModel)
