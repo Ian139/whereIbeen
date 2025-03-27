@@ -1,5 +1,9 @@
 import MapKit
 import Foundation
+import WhereIBeenShared
+
+// Reference the ErasedRegion from Shared
+// @_implementationOnly import struct WhereIBeen.Sources.Shared.ErasedRegion
 
 struct MapArea {
     /// Maximum number of coordinates to store to prevent memory issues
@@ -23,8 +27,8 @@ struct MapArea {
     }
     
     /// Regions that have been erased/explored (stored as circles with center and radius)
-    private var _erasedRegions: [ErasedRegion] = []
-    var erasedRegions: [ErasedRegion] {
+    private var _erasedRegions: [WhereIBeenErasedRegion] = []
+    var erasedRegions: [WhereIBeenErasedRegion] {
         get { return _erasedRegions }
         set {
             // Limit the number of regions to prevent memory issues
@@ -75,17 +79,5 @@ struct MapArea {
         )
         
         return currentRegion
-    }
-}
-
-/// Represents a circular region that has been erased/explored
-struct ErasedRegion: Equatable {
-    let center: CLLocationCoordinate2D
-    let radiusMiles: Double
-    
-    static func == (lhs: ErasedRegion, rhs: ErasedRegion) -> Bool {
-        return lhs.center.latitude == rhs.center.latitude &&
-               lhs.center.longitude == rhs.center.longitude &&
-               lhs.radiusMiles == rhs.radiusMiles
     }
 } 

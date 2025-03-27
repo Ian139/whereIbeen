@@ -2,6 +2,8 @@ import MapKit
 import Foundation
 
 /// Represents a circular region that has been erased/explored
+public typealias WhereIBeenErasedRegion = ErasedRegion
+
 public struct ErasedRegion: Equatable {
     public let center: CLLocationCoordinate2D
     public let radiusMiles: Double

@@ -2,6 +2,7 @@ import SwiftUI
 import MapKit
 import Combine
 import CoreLocation
+import WhereIBeenShared
 
 /// Represents a cell in the exploration grid
 struct GridCell: Hashable {
@@ -64,7 +65,7 @@ class MapViewModel: ObservableObject {
         set { mapArea.exploredCoordinates = newValue }
     }
     
-    var erasedRegions: [ErasedRegion] {
+    var erasedRegions: [WhereIBeenErasedRegion] {
         get { mapArea.erasedRegions }
         set { mapArea.erasedRegions = newValue }
     }
@@ -246,7 +247,7 @@ class MapViewModel: ObservableObject {
         region = MapArea.defaultRegion
         lastLocation = nil
         
-        if let location = userLocation {
+        if userLocation != nil {
             centerOnUser()
         }
     }

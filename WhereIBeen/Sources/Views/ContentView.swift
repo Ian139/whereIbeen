@@ -184,14 +184,7 @@ struct MapContainer: UIViewRepresentable {
         }
         
         func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
-            if let fogOverlay = overlay as? FogOverlay {
-                let renderer = MKPolygonRenderer(overlay: fogOverlay)
-                renderer.fillColor = UIColor(red: 0, green: 0.31, blue: 0.78, alpha: 0.45)
-                renderer.strokeColor = UIColor(red: 0, green: 0.31, blue: 0.78, alpha: 0.6)
-                renderer.lineWidth = 1
-                return renderer
-            } else if let polygon = overlay as? MKPolygon {
-                // For simplified overlays
+            if let polygon = overlay as? MKPolygon {
                 let renderer = MKPolygonRenderer(overlay: polygon)
                 renderer.fillColor = UIColor(red: 0, green: 0.31, blue: 0.78, alpha: 0.45)
                 renderer.strokeColor = UIColor(red: 0, green: 0.31, blue: 0.78, alpha: 0.6)
@@ -252,11 +245,6 @@ struct MapContainer: UIViewRepresentable {
     }
     
     private func shouldUpdateRegion(_ current: MKCoordinateRegion, _ new: MKCoordinateRegion, _ context: Context) -> Bool {
-        let coordinator = context.coordinator
-        guard let lastRegion = coordinator.mapState.lastRegion else { 
-            return true // First time, always update
-        }
-        
         // Check if the change is significant enough to warrant an update
         let latDiff = abs(current.center.latitude - new.center.latitude)
         let lngDiff = abs(current.center.longitude - new.center.longitude)

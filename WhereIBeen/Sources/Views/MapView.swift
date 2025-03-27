@@ -86,8 +86,8 @@ struct MapView: UIViewRepresentable {
         
         /// Provide renderers for map overlays
         func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
-            if let fogOverlay = overlay as? FogOverlay {
-                let renderer = MKPolygonRenderer(overlay: fogOverlay)
+            if let polygon = overlay as? MKPolygon {
+                let renderer = MKPolygonRenderer(overlay: polygon)
                 renderer.fillColor = UIColor(red: 0, green: 0.31, blue: 0.78, alpha: 0.45)
                 renderer.strokeColor = UIColor(red: 0, green: 0.31, blue: 0.78, alpha: 0.6)
                 renderer.lineWidth = 1
