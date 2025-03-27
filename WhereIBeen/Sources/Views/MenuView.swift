@@ -32,9 +32,9 @@ struct MenuView: View {
         case 0:
             return "map"
         case 1:
-            return "person.circle"
-        case 2:
             return "person.2"
+        case 2:
+            return "person.circle"
         case 3:
             return "gear"
         default:
@@ -47,9 +47,9 @@ struct MenuView: View {
         case 0:
             return "Map"
         case 1:
-            return "Profile"
+            return "Social"
         case 2:
-            return "Friends"
+            return "Profile"
         case 3:
             return "Settings"
         default:

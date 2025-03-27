@@ -84,13 +84,13 @@ struct ContentView: View {
                     }
                 }
             } else if selectedTab == 1 {
-                // Profile - pass the shared viewModel
-                ProfileView(viewModel: viewModel)
-            } else if selectedTab == 2 {
-                // Friends (placeholder)
-                Text("Friends View Coming Soon")
+                // Social (previously Friends)
+                Text("Social View Coming Soon")
                     .font(.title)
                     .foregroundColor(.secondary)
+            } else if selectedTab == 2 {
+                // Profile - pass the shared viewModel
+                ProfileView(viewModel: viewModel)
             } else if selectedTab == 3 {
                 // Settings
                 SettingsView()
