@@ -103,34 +103,48 @@ struct TripCard: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            // Map preview
-            MapPreview(region: trip.region, exploredCoordinates: trip.coordinates)
-                .frame(height: 120)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-                .shadow(radius: 2)
-            
-            Text(trip.name)
-                .font(.headline)
-                .lineLimit(1)
-            
-            HStack {
-                Image(systemName: "map")
-                    .foregroundColor(.secondary)
+            // Enhanced map preview
+            ZStack(alignment: .bottomTrailing) {
+                MapPreview(region: trip.region, exploredCoordinates: trip.coordinates)
+                    .frame(height: 150)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .strokeBorder(Color.gray.opacity(0.3), lineWidth: 1)
+                    )
                 
-                Text(String(format: "%.1f miles", trip.totalMiles))
+                // Distance badge
+                Text(String(format: "%.1f mi", trip.totalMiles))
                     .font(.caption)
-                    .foregroundColor(.secondary)
-                
-                Spacer()
-                
-                Text(formatDate(trip.startDate))
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                    .fontWeight(.medium)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Color.blue.opacity(0.8))
+                    .foregroundColor(.white)
+                    .clipShape(Capsule())
+                    .padding(8)
             }
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Text(trip.name)
+                    .font(.headline)
+                    .lineLimit(1)
+                
+                HStack {
+                    Image(systemName: "calendar")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    
+                    Text(formatDate(trip.startDate))
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+            .padding(.horizontal, 8)
+            .padding(.bottom, 8)
         }
-        .padding(12)
         .background(Color(UIColor.secondarySystemBackground))
         .cornerRadius(16)
+        .shadow(color: Color.black.opacity(0.1), radius: 3, x: 0, y: 1)
     }
     
     private func formatDate(_ date: Date) -> String {
@@ -150,64 +164,85 @@ struct TripDetailView: View {
         NavigationView {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
-                    // Full-size map with exploration overlay
-                    MapPreview(region: trip.region, exploredCoordinates: trip.coordinates)
-                        .frame(height: 300)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                    // Enhanced full-size map with exploration overlay
+                    ZStack(alignment: .bottomTrailing) {
+                        MapPreview(region: trip.region, exploredCoordinates: trip.coordinates)
+                            .frame(height: 300)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .strokeBorder(Color.gray.opacity(0.3), lineWidth: 1)
+                            )
+                        
+                        // Trip stats badge
+                        HStack(spacing: 8) {
+                            Label(
+                                String(format: "%.1f mi", trip.totalMiles),
+                                systemImage: "figure.walk"
+                            )
+                            .font(.caption)
+                            .fontWeight(.medium)
+                        }
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(Color.blue.opacity(0.8))
+                        .foregroundColor(.white)
+                        .clipShape(Capsule())
+                        .padding(12)
+                    }
                     
-                    VStack(alignment: .leading, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 16) {
                         // Trip details
-                        Text(trip.name)
-                            .font(.title2)
-                            .fontWeight(.bold)
-                        
-                        Text(trip.description)
-                            .font(.body)
-                        
-                        Divider()
-                        
-                        // Trip stats
                         HStack {
-                            VStack(alignment: .leading) {
-                                Text("Date")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                                Text(formatDate(trip.startDate))
-                                    .font(.subheadline)
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(trip.name)
+                                    .font(.title2)
+                                    .fontWeight(.bold)
+                                
+                                if trip.isPrivate {
+                                    HStack {
+                                        Image(systemName: "lock.fill")
+                                            .foregroundColor(.secondary)
+                                            .font(.caption)
+                                        Text("Private")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                    }
+                                }
                             }
                             
                             Spacer()
                             
-                            VStack(alignment: .trailing) {
-                                Text("Distance")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                                Text(String(format: "%.1f miles", trip.totalMiles))
-                                    .font(.subheadline)
-                            }
+                            Text(formatDate(trip.startDate))
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                                .padding(6)
+                                .background(Color(UIColor.tertiarySystemBackground))
+                                .cornerRadius(8)
                         }
                         
-                        if trip.isPrivate {
-                            HStack {
-                                Image(systemName: "lock.fill")
-                                    .foregroundColor(.secondary)
-                                Text("Private")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-                            .padding(.top, 4)
-                        }
+                        // Trip description with background
+                        Text(trip.description)
+                            .font(.body)
+                            .padding(12)
+                            .background(Color(UIColor.tertiarySystemBackground))
+                            .cornerRadius(8)
                         
                         Spacer()
                         
+                        // Delete button with improved styling
                         Button(action: {
                             showDeleteConfirmation = true
                         }) {
-                            Text("Delete Trip")
-                                .foregroundColor(.red)
-                                .frame(maxWidth: .infinity)
+                            HStack {
+                                Image(systemName: "trash")
+                                Text("Delete Trip")
+                            }
+                            .foregroundColor(.white)
+                            .padding()
+                            .frame(maxWidth: .infinity)
+                            .background(Color.red)
+                            .cornerRadius(10)
                         }
-                        .padding(.top, 20)
                     }
                     .padding()
                 }
@@ -240,50 +275,71 @@ struct TripPostCard: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            // Map preview with fog overlay
-            MapPreview(region: post.mapRegion, exploredCoordinates: post.exploredCoordinates)
-                .frame(height: 180)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-                .shadow(radius: 4)
-            
-            // Post header
-            HStack {
-                Image(systemName: post.profileImage)
-                    .font(.title3)
-                    .foregroundColor(.blue)
+            // Enhanced map preview with fog overlay
+            ZStack(alignment: .bottomTrailing) {
+                MapPreview(region: post.mapRegion, exploredCoordinates: post.exploredCoordinates)
+                    .frame(height: 180)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .strokeBorder(Color.gray.opacity(0.3), lineWidth: 1)
+                    )
                 
-                Text(post.username)
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                
-                Spacer()
-                
-                Text(timeAgo(from: post.postedAt))
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                // Likes badge
+                HStack(spacing: 6) {
+                    Image(systemName: "heart.fill")
+                        .font(.caption)
+                    
+                    Text("\(post.likes)")
+                        .font(.caption)
+                        .fontWeight(.medium)
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(Color.red.opacity(0.8))
+                .foregroundColor(.white)
+                .clipShape(Capsule())
+                .padding(8)
             }
             
-            // Trip name
-            Text(post.tripName)
-                .font(.headline)
-                .lineLimit(1)
-            
-            // Interaction stats
-            HStack {
-                Label("\(post.likes)", systemImage: "heart")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+            // Post header and trip info
+            VStack(alignment: .leading, spacing: 6) {
+                // Post header
+                HStack {
+                    Image(systemName: post.profileImage)
+                        .font(.subheadline)
+                        .foregroundColor(.blue)
+                    
+                    Text(post.username)
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                    
+                    Spacer()
+                    
+                    Text(timeAgo(from: post.postedAt))
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
                 
-                Spacer()
+                // Trip name
+                Text(post.tripName)
+                    .font(.headline)
+                    .lineLimit(1)
                 
-                Label("\(post.comments)", systemImage: "bubble.right")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                // Comments count
+                HStack {
+                    Spacer()
+                    
+                    Label("\(post.comments) comments", systemImage: "bubble.right")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
             }
+            .padding(.horizontal, 8)
+            .padding(.bottom, 8)
         }
-        .padding(12)
         .background(Color(UIColor.secondarySystemBackground))
         .cornerRadius(16)
+        .shadow(color: Color.black.opacity(0.1), radius: 3, x: 0, y: 1)
     }
     
     private func timeAgo(from date: Date) -> String {
@@ -297,46 +353,78 @@ struct MapPreview: View {
     let region: MKCoordinateRegion
     let exploredCoordinates: [CLLocationCoordinate2D]
     
+    // Define a simple identifiable struct to use with Map
+    private struct MapPoint: Identifiable {
+        let id = UUID()
+        let coordinate: CLLocationCoordinate2D
+    }
+    
     var body: some View {
-        // Use MapKit to show the preview with fog overlay
-        Map(coordinateRegion: .constant(region), showsUserLocation: false)
-            .overlay(
-                // Semi-transparent fog overlay
-                FogOverlay(exploredCoordinates: exploredCoordinates)
-            )
-            .disabled(true) // Prevent interaction with the preview
+        // Use MapKit to show the preview with improved fog overlay
+        ZStack {
+            Map(coordinateRegion: .constant(region), showsUserLocation: false)
+                .allowsHitTesting(false) // Prevent interaction with the preview
+            
+            // Enhanced fog overlay
+            EnhancedFogOverlay(region: region, exploredCoordinates: exploredCoordinates)
+        }
+        .cornerRadius(12)
     }
 }
 
-struct FogOverlay: View {
+struct EnhancedFogOverlay: View {
+    let region: MKCoordinateRegion
     let exploredCoordinates: [CLLocationCoordinate2D]
     
     var body: some View {
         GeometryReader { geometry in
-            // For now, just show a simple overlay
-            // TODO: Implement actual fog overlay based on explored coordinates
-            Color.black.opacity(0.3)
-                .overlay(
-                    Path { path in
-                        // Create a simple path connecting explored coordinates
-                        if let first = exploredCoordinates.first {
-                            path.move(to: coordinateToPoint(first, in: geometry))
-                            for coordinate in exploredCoordinates.dropFirst() {
-                                path.addLine(to: coordinateToPoint(coordinate, in: geometry))
-                            }
+            ZStack {
+                // Semi-transparent dark fog
+                Color.black.opacity(0.4)
+                
+                // Explored area visualization
+                Canvas { context, size in
+                    // Calculate the map bounds
+                    let minLat = region.center.latitude - region.span.latitudeDelta/2
+                    let maxLat = region.center.latitude + region.span.latitudeDelta/2
+                    let minLon = region.center.longitude - region.span.longitudeDelta/2
+                    let maxLon = region.center.longitude + region.span.longitudeDelta/2
+                    
+                    // Draw explored cells
+                    for coordinate in exploredCoordinates {
+                        // Skip if outside visible region with some buffer
+                        if coordinate.latitude < minLat - 0.1 || coordinate.latitude > maxLat + 0.1 ||
+                           coordinate.longitude < minLon - 0.1 || coordinate.longitude > maxLon + 0.1 {
+                            continue
                         }
+                        
+                        // Convert to view coordinates
+                        let x = ((coordinate.longitude - minLon) / (maxLon - minLon)) * size.width
+                        let y = ((maxLat - coordinate.latitude) / (maxLat - minLat)) * size.height
+                        
+                        // Draw a small circle for each coordinate
+                        let cellSize = min(size.width, size.height) / 30
+                        let rect = CGRect(x: x - cellSize/2, y: y - cellSize/2, width: cellSize, height: cellSize)
+                        let path = Path(ellipseIn: rect)
+                        
+                        // Use a gradient fill for better visibility
+                        context.fill(path, with: .color(.blue.opacity(0.6)))
+                        context.stroke(path, with: .color(.white.opacity(0.4)), lineWidth: 1)
                     }
-                    .stroke(Color.blue, lineWidth: 2)
-                )
+                }
+                
+                // Add subtle glow effect
+                Text("")
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(
+                        LinearGradient(
+                            colors: [.blue.opacity(0.1), .clear],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+            }
         }
-    }
-    
-    private func coordinateToPoint(_ coordinate: CLLocationCoordinate2D, in geometry: GeometryProxy) -> CGPoint {
-        // Convert coordinate to point in the view
-        // This is a simplified conversion for demonstration
-        let x = (coordinate.longitude + 180) / 360 * geometry.size.width
-        let y = (90 - coordinate.latitude) / 180 * geometry.size.height
-        return CGPoint(x: x, y: y)
     }
 }
 
@@ -349,24 +437,57 @@ struct TripPostDetail: View {
         NavigationView {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
-                    // Full-size map with fog overlay
-                    MapPreview(region: post.mapRegion, exploredCoordinates: post.exploredCoordinates)
-                        .frame(height: 300)
+                    // Enhanced full-size map with fog overlay
+                    ZStack(alignment: .bottomTrailing) {
+                        MapPreview(region: post.mapRegion, exploredCoordinates: post.exploredCoordinates)
+                            .frame(height: 300)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .strokeBorder(Color.gray.opacity(0.3), lineWidth: 1)
+                            )
+                        
+                        // Social stats badge
+                        HStack(spacing: 10) {
+                            Label("\(post.likes)", systemImage: "heart.fill")
+                                .font(.caption)
+                                .fontWeight(.medium)
+                                .foregroundColor(.white)
+                        }
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(Color.red.opacity(0.8))
+                        .foregroundColor(.white)
+                        .clipShape(Capsule())
+                        .padding(12)
+                    }
                     
-                    VStack(alignment: .leading, spacing: 12) {
-                        // Post header
-                        HStack {
+                    VStack(alignment: .leading, spacing: 16) {
+                        // Post header with profile info
+                        HStack(spacing: 12) {
                             Image(systemName: post.profileImage)
                                 .font(.title2)
                                 .foregroundColor(.blue)
+                                .frame(width: 40, height: 40)
+                                .background(Color(UIColor.tertiarySystemBackground))
+                                .clipShape(Circle())
                             
-                            VStack(alignment: .leading) {
+                            VStack(alignment: .leading, spacing: 4) {
                                 Text(post.username)
                                     .font(.headline)
+                                
                                 Text(timeAgo(from: post.postedAt))
                                     .font(.caption)
                                     .foregroundColor(.secondary)
                             }
+                            
+                            Spacer()
+                            
+                            Label("\(post.comments)", systemImage: "bubble.right")
+                                .font(.caption)
+                                .padding(6)
+                                .background(Color(UIColor.tertiarySystemBackground))
+                                .cornerRadius(8)
+                                .foregroundColor(.secondary)
                         }
                         
                         // Trip details
@@ -376,31 +497,39 @@ struct TripPostDetail: View {
                         
                         Text(post.tripDescription)
                             .font(.body)
-                        
-                        // Interaction stats
-                        HStack {
-                            Button(action: {}) {
-                                Label("\(post.likes)", systemImage: "heart")
-                            }
-                            
-                            Spacer()
-                            
-                            Label("\(post.comments) comments", systemImage: "bubble.right")
-                        }
-                        .foregroundColor(.secondary)
+                            .padding(12)
+                            .background(Color(UIColor.tertiarySystemBackground))
+                            .cornerRadius(8)
                         
                         Divider()
+                            .padding(.vertical, 4)
                         
-                        // Comment input
-                        HStack {
-                            TextField("Add a comment...", text: $comment)
-                                .textFieldStyle(RoundedBorderTextFieldStyle())
+                        // Comment input with enhanced styling
+                        VStack(spacing: 12) {
+                            Text("Add a comment")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
                             
-                            Button("Post") {
-                                // TODO: Handle comment posting
-                                comment = ""
+                            HStack {
+                                TextField("Write something...", text: $comment)
+                                    .padding(10)
+                                    .background(Color(UIColor.tertiarySystemBackground))
+                                    .cornerRadius(8)
+                                
+                                Button(action: {
+                                    // TODO: Handle comment posting
+                                    comment = ""
+                                }) {
+                                    Text("Post")
+                                        .fontWeight(.medium)
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 8)
+                                        .background(comment.isEmpty ? Color.blue.opacity(0.3) : Color.blue)
+                                        .foregroundColor(.white)
+                                        .cornerRadius(8)
+                                }
+                                .disabled(comment.isEmpty)
                             }
-                            .disabled(comment.isEmpty)
                         }
                     }
                     .padding()
