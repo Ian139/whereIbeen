@@ -4,6 +4,7 @@ import MapKit
 /// Container for the MapView that sets up the MKMapView reference
 struct MapContainer: UIViewRepresentable {
     @ObservedObject var viewModel: MapViewModel
+    @ObservedObject private var settings = SettingsService.shared
     
     // Track previous values to avoid unnecessary updates
     class MapState {

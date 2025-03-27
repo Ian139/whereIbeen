@@ -86,6 +86,7 @@ struct ContentView: View {
             } else if selectedTab == 1 {
                 // Social view
                 SocialView()
+                    .environmentObject(viewModel)
             } else if selectedTab == 2 {
                 // Profile - pass the shared viewModel
                 ProfileView(viewModel: viewModel)
@@ -184,8 +185,13 @@ struct MapContainer: UIViewRepresentable {
         func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
             if let polygon = overlay as? MKPolygon {
                 let renderer = MKPolygonRenderer(overlay: polygon)
-                renderer.fillColor = UIColor(red: 0, green: 0.31, blue: 0.78, alpha: 0.45)
-                renderer.strokeColor = UIColor(red: 0, green: 0.31, blue: 0.78, alpha: 0.6)
+                
+                // Use shared colors for consistent look
+                let fogUIColor = UIColor(Color.fogColor)
+                let fogBorderUIColor = UIColor(Color.fogBorderColor)
+                
+                renderer.fillColor = fogUIColor
+                renderer.strokeColor = fogBorderUIColor
                 renderer.lineWidth = 1
                 return renderer
             }
